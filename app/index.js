@@ -44,6 +44,9 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 type: String,
                 desc: 'The database name to use with mongoose'
             });
+
+            this.log('Swaggerize Generator');
+
         }
     },
 
@@ -73,7 +76,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 debug("updated destinationRoot to %s", this.destinationRoot());
             }
             this.appRoot = this.destinationRoot();
-            this.log("Project %s base path %s", this.appname, this.appRoot);
+            debug("Project %s base path %s", this.appname, this.appRoot);
         },
 
         setDefaults: function() {
@@ -174,8 +177,6 @@ var ModuleGenerator = yeoman.generators.Base.extend({
 
             ];
 
-            self.log('Swaggerize Generator');
-
             self.prompt(prompts, function (answers) {
                 for (var key in answers) {
                     debug("prompt results: %s =>", key, answers[key]);
@@ -202,7 +203,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             if (!this.config.get('framework') || !~FRAMEWORKS.indexOf(this.config.get('framework'))) {
                 this.env.error(new Error('missing or invalid required input `framework`'));
             }
-            this.log("Using REST Framework %s", this.config.get('framework'));
+            debug("Using REST Framework %s", this.config.get('framework'));
         }
     },
 
@@ -219,6 +220,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
 
             apiDestPath = path.join(this.appRoot, 'config');
             if (this.options['dry-run']) {
+                this.log("(DRY-RUN) using temp location %s", path.join(os.tmpdir(), 'config'));
                 apiDestPath = path.join(os.tmpdir(), 'config');
             }
             mkdirp.sync(apiDestPath);
@@ -246,6 +248,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
 
             apiDestPath = path.join(self.appRoot, 'config');
             if (self.options['dry-run']) {
+                self.log("(DRY-RUN) using temp location %s", path.join(os.tmpdir(), 'config'));
                 apiDestPath = path.join(os.tmpdir(), 'config');
             }
             mkdirp.sync(apiDestPath);
@@ -291,12 +294,12 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             }
 
             if (this.options['dry-run']) {
-                this.log.ok("%s written", path.join(this.appRoot, '.jshintrc'));
-                this.log.ok("%s written", path.join(this.appRoot, '.gitignore'));
-                this.log.ok("%s written", path.join(this.appRoot, '.npmignore'));
-                this.log.ok("%s written", path.join(this.appRoot, 'package.json'));
-                this.log.ok("%s written", path.join(this.appRoot, 'README.md'));
-                this.log.ok("%s written", path.join(this.appRoot, 'server.js'));
+                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, '.jshintrc'));
+                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, '.gitignore'));
+                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, '.npmignore'));
+                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'package.json'));
+                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'README.md'));
+                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'server.js'));
                 return;
             }
 
@@ -320,8 +323,8 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             }
 
             if (this.options['dry-run']) {
-                this.log.ok("%s written", path.join(this.appRoot, 'lib', 'lib_mongoose.js'));
-                this.log.ok("%s written", path.join(this.appRoot, 'config', 'databaseConfig.js'));
+                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'lib', 'lib_mongoose.js'));
+                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'config', 'databaseConfig.js'));
                 return;
             }
 
@@ -417,8 +420,9 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 if (fs.existsSync(file)) {
                     if (!self.options['dry-run']) {
                         fs.writeFileSync(file, update.handlers(file, self.config.get('framework'), route));
+                    } else {
+                        self.log.ok("(DRY-RUN) handler %s updated", file);
                     }
-                    self.log.ok("handler %s updated", file);
                     return;
                 }
 
@@ -426,8 +430,9 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 route._  = _;
                 if (!self.options['dry-run']) {
                     self.template('_handler_' + self.config.get('framework') + '.js', file, route);
+                } else {
+                    self.log.ok("(DRY-RUN) handler %s generated", file);
                 }
-                self.log.ok("handler %s generated", file);
             });
         },
 
@@ -463,14 +468,16 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                     debug("generating mongoose enabled models");
                     if (!self.options['dry-run']) {
                         self.template('_model_mongoose.js', file, model);
+                    } else {
+                        self.log.ok("(DRY-RUN) (db) model %s generated", file);
                     }
-                    self.log.ok("(db) model %s generated", file);
                 } else {
                     debug("generating basic models");
                     if (!self.options['dry-run']) {
                         self.template('_model.js', file, model);
+                    } else {
+                        self.log.ok("(DRY-RUN) model %s generated", file);
                     }
-                    self.log.ok("model %s generated", file);
                 }
             });
         },
@@ -479,6 +486,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             var self, api, models, resourcePath, handlersPath, modelsPath, apiPath;
 
             if (!this.config.get('genTests')) {
+                debug("skipping api models generation");
                 return;
             }
 
@@ -565,8 +573,9 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                         operations: operations,
                         models: models
                     });
+                } else {
+                    self.log.ok("(DRY-RUN) test %s generated", fileName);
                 }
-                self.log.ok("test %s generated", fileName);
 
             });
         },
@@ -575,7 +584,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             // enable beautify of all js files
             var jsFilter = gulpFilter('**/*.js', {restore: true});
             this.registerTransformStream(jsFilter);
-            this.registerTransformStream(beautify());
+            this.registerTransformStream(beautify({jslint_happy: false}));
             this.registerTransformStream(jsFilter.restore);
         }
 
@@ -584,15 +593,16 @@ var ModuleGenerator = yeoman.generators.Base.extend({
     install: {
         installNpm: function installNpm() {
             if (this.options['skip-install']) {
-                this.log("skipping install");
+                debug("skipping install");
                 return;
             }
 
             if (!this.options.only) {
                 if (!this.options['dry-run']) {
                     this.npmInstall([], {"--quiet": true});
+                } else {
+                    this.log("(DRY-RUN) install complete");
                 }
-                this.log("install complete");
             }
         }
     }

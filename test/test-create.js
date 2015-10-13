@@ -138,7 +138,6 @@ test('swagger-express generator', function(t) {
             });
 
             app.options['dry-run'] = true;
-            // app.options['only'] = 'handlers,models';
             app.options['only'] = 'tests,handlers,models';
 
             app.run(function() {
