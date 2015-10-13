@@ -207,14 +207,6 @@ var ModuleGenerator = yeoman.generators.Base.extend({
     },
 
     writing: {
-        prepare: function () {
-            // enable beautify of all js files
-            var jsFilter = gulpFilter('**/*.js', {restore: true});
-            this.registerTransformStream(jsFilter);
-            this.registerTransformStream(beautify());
-            this.registerTransformStream(jsFilter.restore);
-        },
-
         captureSpecLocal: function () {
             var apiSrc, apiSrcPath, apiDestPath, apiPath;
 
@@ -577,6 +569,14 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 self.log.ok("test %s generated", fileName);
 
             });
+        },
+
+        finalize: function () {
+            // enable beautify of all js files
+            var jsFilter = gulpFilter('**/*.js', {restore: true});
+            this.registerTransformStream(jsFilter);
+            this.registerTransformStream(beautify());
+            this.registerTransformStream(jsFilter.restore);
         }
 
     },
