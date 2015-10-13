@@ -308,6 +308,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 return;
             }
 
+            debug("generating base application structure");
             this.copy('jshintrc', '.jshintrc');
             this.copy('gitignore', '.gitignore');
             this.copy('npmignore', '.npmignore');
@@ -327,14 +328,16 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             }
 
             if (this.options['dry-run']) {
-                this.log.ok("%s written", path.join(this.appRoot, 'lib/lib_mongoose.js'));
-                this.log.ok("%s written", path.join(this.appRoot, 'config/databaseConfig.js'));
+                this.log.ok("%s written", path.join(this.appRoot, 'lib', 'lib_mongoose.js'));
+                this.log.ok("%s written", path.join(this.appRoot, 'config', 'databaseConfig.js'));
                 return;
             }
 
+            debug("generating database configuration files");
             mkdirp.sync(path.join(this.appRoot, 'lib'));
-            this.template('lib_mongoose.js', 'lib/lib_mongoose.js', this.config.getAll());
-            this.template('databaseConfig.js', 'config/databaseConfig.js', {database: this.config.get('database')});
+            this.template('lib_mongoose.js', path.join('lib', 'lib_mongoose.js'), this.config.getAll());
+            this.template('databaseConfig.js', path.join('config', 'databaseConfig.js'),
+                {database: this.config.get('database')});
         },
 
         handlers: function () {
@@ -478,12 +481,8 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                     self.log.ok("model %s generated", file);
                 }
             });
-        }
+        },
 
-        // this will need to become a subgenerator such that models and handlers are already written
-        // specifically the models as it attempts to require the file. But yeoman does not write the
-        // files until the very end of the process.
-/*
         tests: function () {
             var self, api, models, resourcePath, handlersPath, modelsPath, apiPath;
 
@@ -491,7 +490,9 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 return;
             }
 
-            mkdirp.sync(path.join(this.appRoot, 'tests'));
+            if (!this.options['dry-run']) {
+                mkdirp.sync(path.join(this.appRoot, 'tests'));
+            }
 
             self = this;
             api = this.api;
@@ -504,11 +505,10 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             if (api.definitions && modelsPath) {
 
                 Object.keys(api.definitions).forEach(function (key) {
-                    var modelSchema, ModelCtor, options;
+                    var modelSchema, options;
 
                     options = {};
                     modelSchema = api.definitions[key];
-                    ModelCtor = require(path.join(self.appRoot, 'models', key.toLowerCase() + '.js'));
 
                     Object.keys(modelSchema.properties).forEach(function (prop) {
                         var defaultValue;
@@ -534,7 +534,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                         }
                     });
 
-                    models[key] = new ModelCtor(options);
+                    models[key] = options;
                 });
 
             }
@@ -564,18 +564,21 @@ var ModuleGenerator = yeoman.generators.Base.extend({
 
                 fileName = path.join(self.appRoot, 'tests', 'test' + opath.replace(/\//g, '_') + '.js');
 
-                self.template('_test_' + this.config.get('framework') + '.js', fileName, {
-                    _: _,
-                    apiPath: apiPath,
-                    handlers: handlersPath,
-                    resourcePath: resourcePath,
-                    operations: operations,
-                    models: models
-                });
+                if (!self.options['dry-run']) {
+                    self.template('_test_' + self.config.get('framework') + '.js', fileName, {
+                        _: _,
+                        apiPath: apiPath,
+                        handlers: handlersPath,
+                        resourcePath: resourcePath,
+                        operations: operations,
+                        models: models
+                    });
+                }
+                self.log.ok("test %s generated", fileName);
 
             });
         }
-*/
+
     },
 
     install: {

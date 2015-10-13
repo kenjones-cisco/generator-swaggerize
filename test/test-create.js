@@ -37,9 +37,9 @@ test('swagger-express generator', function(t) {
                 'README.md',
                 'server.js',
                 'package.json',
-                // 'tests',
-                // 'tests/test_pets_{id}.js',
-                // 'tests/test_pets.js',
+                'tests',
+                'tests/test_pets_{id}.js',
+                'tests/test_pets.js',
                 'config',
                 'config/pets.yaml',
                 'handlers',
@@ -77,9 +77,9 @@ test('swagger-express generator', function(t) {
                 'README.md',
                 'server.js',
                 'package.json',
-                // 'tests',
-                // 'tests/test_pets_{id}.js',
-                // 'tests/test_pets.js',
+                'tests',
+                'tests/test_pets_{id}.js',
+                'tests/test_pets.js',
                 'config',
                 'config/pets.json',
                 'handlers',
@@ -138,14 +138,14 @@ test('swagger-express generator', function(t) {
             });
 
             app.options['dry-run'] = true;
-            app.options['only'] = 'handlers,models';
-            // app.options['only'] = 'tests,handlers,models';
+            // app.options['only'] = 'handlers,models';
+            app.options['only'] = 'tests,handlers,models';
 
             app.run(function() {
                 t.ok(!app.config.get('genProject'), 'project generation disabled');
                 t.ok(app.config.get('genModels'), 'model generation enabled');
                 t.ok(app.config.get('genHandlers'), 'handler generation enabled');
-                // t.ok(app.config.get('genTests'), 'test generation enabled');
+                t.ok(app.config.get('genTests'), 'test generation enabled');
                 t.end();
             });
         });
@@ -167,7 +167,7 @@ test('swagger-express generator', function(t) {
                 t.ok(!app.config.get('genProject'), 'project generation disabled');
                 t.ok(app.config.get('genModels'), 'model generation enabled');
                 t.ok(!app.config.get('genHandlers'), 'handler generation disabled');
-                // t.ok(!app.config.get('genTests'), 'test generation disabled');
+                t.ok(!app.config.get('genTests'), 'test generation disabled');
                 t.end();
             });
         });
@@ -189,12 +189,12 @@ test('swagger-express generator', function(t) {
                 t.ok(!app.config.get('genProject'), 'project generation disabled');
                 t.ok(!app.config.get('genModels'), 'model generation disabled');
                 t.ok(app.config.get('genHandlers'), 'handler generation enabled');
-                // t.ok(!app.config.get('genTests'), 'test generation disabled');
+                t.ok(!app.config.get('genTests'), 'test generation disabled');
                 t.end();
             });
         });
     });
-/*
+
     t.test('supports --only tests', function(t) {
 
         setup(function() {
@@ -216,7 +216,7 @@ test('swagger-express generator', function(t) {
             });
         });
     });
-*/
+
     t.test('discover framework (express) from package.json', function(t) {
         t.plan(1);
 
@@ -319,9 +319,9 @@ test('swagger-express generator', function(t) {
                 'README.md',
                 'server.js',
                 'package.json',
-                // 'tests',
-                // 'tests/test_pets_{id}.js',
-                // 'tests/test_pets.js',
+                'tests',
+                'tests/test_pets_{id}.js',
+                'tests/test_pets.js',
                 'config',
                 'config/pets.yaml',
                 'handlers',

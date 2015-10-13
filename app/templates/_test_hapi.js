@@ -60,11 +60,11 @@ Test('api', function (t) {
         }
         if (operation.method.toLowerCase() === 'post' || operation.method.toLowerCase() === 'put') {%>
         var body = {<% _.forEach(Object.keys(body).filter(function (k) { return !!body[k]; }), function (k, i) {%>
-            '<%=k%>': <%=JSON.stringify(body[k])%><%if (i < Object.keys(body).filter(function (k) { return !!body[k]; }).length - 1) {%>, <%}%><%})%>
+            '<%=k%>': <%-JSON.stringify(body[k])%><%if (i < Object.keys(body).filter(function (k) { return !!body[k]; }).length - 1) {%>, <%}%><%})%>
         };
         <%} if (responseSchema) {%>
         var responseSchema = Enjoi({<% _.forEach(Object.keys(responseSchema), function (k, i) {%>
-            '<%=k%>': <%=JSON.stringify(responseSchema[k])%><%if (i < Object.keys(responseSchema).length - 1) {%>, <%}%><%})%>
+            '<%=k%>': <%-JSON.stringify(responseSchema[k])%><%if (i < Object.keys(responseSchema).length - 1) {%>, <%}%><%})%>
         }, {
             '#': require('<%=apiPath%>')
         });
