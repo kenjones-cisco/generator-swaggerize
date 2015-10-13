@@ -4,7 +4,7 @@
  * Operations on <%=path%>
  */
 module.exports = {
-    <%_.forEach(methods, function (method, i) {%>
+    <% _.forEach(methods, function (method, i) {%>
     /**
      * <%=method.description%>
      * parameters: <%=method.parameters.map(function (p) { return p.name }).join(', ')%>

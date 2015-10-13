@@ -1,4 +1,4 @@
-# <%=_.slugify(appname)%>
+# <%=slugName%>
 
 ```json
 <%=JSON.stringify(api, null, 2)%>

@@ -36,3 +36,5 @@ Thumbs.db
 .Trashes
 
 test/temp
+
+.vagrant/

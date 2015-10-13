@@ -33,26 +33,32 @@
     "node": "0.10.x"
   },
   "dependencies": {
-    "enjoi": "^0.2.0",
+    "debuglog": "^1.0.1",
+    "enjoi": "^1.0.0",
     "escodegen": "^1.4.1",
-    "esprima": "^1.2.2",
+    "esprima": "^2.6.0",
+    "gulp-beautify": "^2.0.0",
+    "gulp-filter": "^3.0.0",
     "js-yaml": "^3.2.6",
+    "lodash": "^3.10.0",
+    "mkdirp": "^0.5.1",
+    "mongoose": "*",
     "swaggerize-routes": "^1.0.0",
     "swaggerize-express": "^4.0.0",
     "swaggerize-hapi": "^1.0.0-",
     "swaggerize-restify": "^2.0.0-",
     "swagger-schema-official": "^2.0.0-",
-    "wreck": "^5.0.1",
-    "yeoman-generator": "~0.16.0"
+    "underscore.string": "^3.1.1",
+    "yeoman-generator": "^0.20.1"
   },
   "devDependencies": {
-    "tape": "^2.4.2",
-    "istanbul": "~0.2.3",
-    "jshint": "^2.4.1"
+    "tape": "^4.2.0",
+    "istanbul": "^0.3.22",
+    "jshint": "^2.8.0"
   },
   "scripts": {
     "test": "tape test/*.js",
-    "cover": "istanbul cover tape -- test/*.js",
+    "cover": "istanbul cover tape -- test/*.js && istanbul report html",
     "lint": "jshint -c .jshintrc app/*.js"
   },
   "main": "./lib/index"

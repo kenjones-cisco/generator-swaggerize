@@ -10,7 +10,7 @@ var test = require('tape'),
 test('api', function (t) {
     var server = restify.createServer();
 
-    <%_.forEach(operations, function (operation) { if (operation.method.toLowerCase() === 'post' || operation.method.toLowerCase() === 'put') { %>
+    <% _.forEach(operations, function (operation) { if (operation.method.toLowerCase() === 'post' || operation.method.toLowerCase() === 'put') { %>
     server.use(restify.bodyParser());<%}});%>
 
     swaggerize(server, {
@@ -18,7 +18,7 @@ test('api', function (t) {
         handlers: path.join(__dirname, '<%=handlers%>')
     });
 
-    <%_.forEach(operations, function (operation) {%>
+    <% _.forEach(operations, function (operation) {%>
     t.test('test <%=operation.method%> <%=operation.path%>', function (t) {
         <%
         var path = operation.path;
@@ -50,11 +50,11 @@ test('api', function (t) {
             });
         }
         if (operation.method.toLowerCase() === 'post' || operation.method.toLowerCase() === 'put') {%>
-        var body = {<%_.forEach(Object.keys(body).filter(function (k) { return !!body[k]; }), function (k, i) {%>
+        var body = {<% _.forEach(Object.keys(body).filter(function (k) { return !!body[k]; }), function (k, i) {%>
             '<%=k%>': <%=JSON.stringify(body[k])%><%if (i < Object.keys(body).filter(function (k) { return !!body[k]; }).length - 1) {%>, <%}%><%})%>
         };
         <%} if (responseSchema) {%>
-        var responseSchema = enjoi({<%_.forEach(Object.keys(responseSchema), function (k, i) {%>
+        var responseSchema = enjoi({<% _.forEach(Object.keys(responseSchema), function (k, i) {%>
             '<%=k%>': <%=JSON.stringify(responseSchema[k])%><%if (i < Object.keys(responseSchema).length - 1) {%>, <%}%><%})%>
         }, {
             '#': require('<%=apiPath%>')

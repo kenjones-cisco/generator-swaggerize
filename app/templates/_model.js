@@ -4,7 +4,7 @@ function <%=id%>(options) {
     if (!options) {
         options = {};
     }
-    <%_.forEach(Object.keys(properties), function (prop) {%>
+    <% _.forEach(Object.keys(properties), function (prop) {%>
     this.<%=prop%> = options.<%=prop%>;<%})%>
 }
 

@@ -184,6 +184,12 @@
                 },
                 "tag": {
                     "type": "string"
+                },
+                "friends": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

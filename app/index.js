@@ -1,390 +1,607 @@
 'use strict';
 
 var util = require('util'),
+    url = require('url'),
+    os = require('os'),
     path = require('path'),
-	fs = require('fs'),
+    fs = require('fs'),
+    _ = require('lodash'),
+    mkdirp = require('mkdirp'),
     yeoman = require('yeoman-generator'),
     jsYaml = require('js-yaml'),
     apischema = require('swagger-schema-official/schema'),
     builderUtils = require('swaggerize-routes/lib/utils'),
-    wreck = require('wreck'),
     enjoi = require('enjoi'),
+    gulpFilter = require('gulp-filter'),
+    beautify = require('gulp-beautify'),
+    us = require('underscore.string'),
     update = require('./update');
 
-var ModuleGenerator = yeoman.generators.Base.extend({
-    init: function () {
-        this.pkg = yeoman.file.readJSON(path.join(__dirname, '../package.json'));
+var debug = require('debuglog')('generator-swaggerize');
+var FRAMEWORKS = ['express', 'hapi', 'restify'];
 
-        this.on('end', function () {
-            if (!this.options['skip-install'] && this.only.length === 0) {
-                this.npmInstall();
-            }
-        });
+var ModuleGenerator = yeoman.generators.Base.extend({
+    initializing: {
+        init: function () {
+            this.option('dry-run', {
+                type: Boolean,
+                desc: 'Do not make changes just display changes that would have been made',
+                defaults: false
+            });
+            this.option('only', {
+                type: String,
+                desc: 'Generate only these types comma-separated: [handlers, models, tests]'
+            });
+            this.option('framework', {
+                type: String,
+                desc: 'specify REST framework [express, hapi, restify]'
+            });
+            this.option('apiPath', {
+                type: String,
+                desc: 'specifiy local path or URL of Swagger API spec'
+            });
+            this.option('database', {
+                type: String,
+                desc: 'The database name to use with mongoose'
+            });
+        }
     },
 
-    askFor: function () {
-        var self, done, pkg;
+    prompting: {
+        askAppNameEarly: function () {
+            var next = this.async();
 
-        self = this;
-        done = this.async();
-        this.only = this.options.only;
-        this.framework = this.options.framework;
-        this.apiPath = this.options.apiPath && path.resolve(this.options.apiPath);
-        this.appname = path.basename(process.cwd());
+            // Handle setting the root early, so .yo-rc.json ends up the right place.
+            this.prompt([{
+                message: 'Project Name',
+                name: 'appname',
+                default: this.appname
+            }], function (props) {
+                debug("default appname was: %s", this.appname);
+                debug("appname provided: %s", props.appname);
+                this.appname = props.appname;
+                next();
+            }.bind(this));
+        },
 
-        if (!this.only || this.only === true) {
-            this.only = [];
-        }
-        else {
-            this.only = this.only.split(',');
-        }
+        setAppName: function () {
+            var oldRoot = this.destinationRoot();
+            debug("cwd: %s", process.cwd());
+            debug("oldRoot: %s appName: %s", oldRoot, this.appname);
+            if (path.basename(oldRoot) !== this.appname) {
+                this.destinationRoot(path.join(oldRoot, this.appname));
+                debug("updated destinationRoot to %s", this.destinationRoot());
+            }
+            this.appRoot = this.destinationRoot();
+            this.log("Project %s base path %s", this.appname, this.appRoot);
+        },
 
-        if (this.only.length > 0) {
-            if (fs.existsSync(path.resolve('package.json'))) {
-                pkg = yeoman.file.readJSON(path.resolve('package.json'));
-                if (pkg.dependencies.hapi) {
-                    this.framework = 'hapi';
+        setDefaults: function() {
+            var genTypes, pkg;
+            var options = this.options;
+
+            if (options['dry-run']) {
+                this.log("Running in dry-run mode");
+            }
+
+            this.config.defaults({
+                appname: this.appname,
+                slugName: us.slugify(this.appname),
+                creatorName: this.user.git.name(),
+                email: this.user.git.email(),
+                githubUser: '', // this.user.github.username(),
+                framework: options.framework,
+                apiPath: options.apiPath,
+                database: options.database,
+                genProject: true,
+                genModels: true,
+                genHandlers: true,
+                genTests: true
+            });
+
+            if (options.only) {
+                debug("only option provided: %s", options.only);
+                // existing project so no need to generate the project parts again
+                this.config.set('genProject', false);
+                this.log("project generation disabled");
+
+                genTypes = options.only.split(',');
+                if (!~genTypes.indexOf('handlers')) {
+                    this.config.set('genHandlers', false);
+                    this.log("hander generation disabled");
+                }
+                if (!~genTypes.indexOf('models')) {
+                    this.config.set('genModels', false);
+                    this.log("models generation disabled");
+                }
+                if (!~genTypes.indexOf('tests')) {
+                    this.config.set('genTests', false);
+                    this.log("test generation disabled");
                 }
             }
-        }
 
-        function all() {
-            return self.only.length === 0;
-        }
+            if (this.fs.exists(path.resolve('package.json'))) {
+                debug("found existing package.json");
+                pkg = this.fs.readJSON(path.resolve('package.json'));
+                if (pkg.dependencies.hapi) {
+                    debug("setting framework to hapi from package.json");
+                    this.config.set('framework', 'hapi');
+                } else if (pkg.dependencies.restify) {
+                    debug("setting framework to restify from package.json");
+                    this.config.set('framework', 'restify');
+                } else if (pkg.dependencies.express) {
+                    debug("setting framework to express from package.json");
+                    this.config.set('framework', 'express');
+                }
 
-        console.log('Swaggerize Generator');
-
-        var prompts = [
-            {
-                name: 'appname',
-                message: 'What would you like to call this project:',
-                default : this.appname,
-                when: all
-            },
-            {
-                name: 'creatorName',
-                message: 'Your name:',
-                when: all
-            },
-            {
-                name: 'githubUser',
-                message: 'Your github user name:',
-                when: all
-            },
-            {
-                name: 'email',
-                message: 'Your email:',
-                when: all
-            },
-            {
-                name: 'apiPath',
-                message: 'Path (or URL) to swagger document:',
-                required: true,
-                default: this.apiPath
-            },
-            {
-                name: 'framework',
-                message: 'Express, Hapi or Restify:',
-                default: this.framework || 'express',
             }
-        ];
 
-        this.prompt(prompts, function (props) {
-            var self;
+        },
 
-            self = this;
+        askFor: function askFor() {
+            var self = this;
+            var next = self.async();
 
-            this.appname = props.appname || this.appname;
-            this.creatorName = props.creatorName;
-            this.githubUser = props.githubUser;
-            this.email = props.email;
-            this.framework = props.framework && props.framework.toLowerCase() || 'express';
-            this.appRoot = path.basename(process.cwd()) === this.appname ? this.destinationRoot() : path.join(this.destinationRoot(), this.appname);
+            var prompts = [
+                {
+                    message: 'Path (or URL) to swagger document',
+                    name: 'apiPath',
+                    type: 'input',
+                    when: function () {
+                        return !self.config.get('apiPath');
+                    }
+                },
 
-            if (this.framework !== 'express' && this.framework !== 'hapi' && this.framework !== 'restify') {
-                done(new Error('Unrecognized framework: ' + this.framework));
+                {
+                    message: 'Rest Framework',
+                    name: 'framework',
+                    type: 'input',
+                    default: 'express',
+                    when: function () {
+                        return !self.config.get('framework');
+                    },
+                    choices: FRAMEWORKS
+                },
+
+                {
+                    message: 'The database name to use with mongoose',
+                    name: 'database',
+                    type: 'input',
+                    when: function () {
+                        return !self.config.get('database');
+                    }
+                }
+
+            ];
+
+            self.log('Swaggerize Generator');
+
+            self.prompt(prompts, function (answers) {
+                for (var key in answers) {
+                    debug("prompt results: %s =>", key, answers[key]);
+                    if (typeof answers[key] !== 'undefined' && answers[key] !== null) {
+                        debug("setting key value: %s", key);
+                        self.config.set(key, answers[key]);
+                    }
+                }
+
+                next();
+            }.bind(this));
+
+            self.config.save();
+        },
+
+        validateConfigs: function () {
+            // until the validate functions work on prompts, need to manually validate the
+            // inputs provided by the user.
+            debug("apiPath = %s", this.config.get('apiPath'));
+            if (!this.config.get('apiPath')) {
+                this.env.error(new Error('missing or invalid required input `apiPath`'));
+            }
+            debug("framework = %s", this.config.get('framework'));
+            if (!this.config.get('framework') || !~FRAMEWORKS.indexOf(this.config.get('framework'))) {
+                this.env.error(new Error('missing or invalid required input `framework`'));
+            }
+            this.log("Using REST Framework %s", this.config.get('framework'));
+        }
+    },
+
+    writing: {
+        prepare: function () {
+            // enable beautify of all js files
+            var jsFilter = gulpFilter('**/*.js', {restore: true});
+            this.registerTransformStream(jsFilter);
+            this.registerTransformStream(beautify());
+            this.registerTransformStream(jsFilter.restore);
+        },
+
+        captureSpecLocal: function () {
+            var apiSrc, apiSrcPath, apiDestPath, apiPath;
+
+            if (this.config.get('apiPath').indexOf('http') === 0) {
                 return;
             }
 
-            if (props.apiPath.indexOf('http') === 0) {
-                wreck.get(props.apiPath, function (err, res, body) {
-                    var fp = props.apiPath.split('/');
+            apiSrcPath = this.config.get('apiPath');
+            debug("apiPath is file: %s", apiSrcPath);
 
-                    if (err) {
-                        done(err);
-                        return;
-                    }
-                    if (res.statusCode !== 200) {
-                        done(new Error('404: ' + props.apiPath));
-                        return;
-                    }
-                    self.rawApi = body;
-                    self.apiPath = path.join(self.appRoot, 'config/' + fp[fp.length - 1]);
-                    self.api = loadApi(self.apiPath, body);
-                    done();
-                });
+            apiDestPath = path.join(this.appRoot, 'config');
+            if (this.options['dry-run']) {
+                apiDestPath = path.join(os.tmpdir(), 'config');
             }
-            else {
-                this.apiPath = path.resolve(props.apiPath);
-                this.api = loadApi(this.apiPath);
+            mkdirp.sync(apiDestPath);
+
+            apiSrc = path.resolve(apiSrcPath);
+            apiPath = path.join(apiDestPath, path.basename(apiSrc));
+            this.copy(apiSrc, apiPath);
+            this.log.ok("API Spec %s written", apiPath);
+            this.config.set('apiPath', apiPath);
+
+        },
+
+        captureSpecRemote: function () {
+            var apiSrc, apiSrcPath, apiDestPath, apiPath, done, self;
+
+            if (this.config.get('apiPath').indexOf('http') !== 0) {
+                return;
+            }
+
+            self = this;
+            done = self.async();
+
+            apiSrcPath = self.config.get('apiPath');
+            debug("apiPath is URL: %s", apiSrcPath);
+
+            apiDestPath = path.join(self.appRoot, 'config');
+            if (self.options['dry-run']) {
+                apiDestPath = path.join(os.tmpdir(), 'config');
+            }
+            mkdirp.sync(apiDestPath);
+
+            apiSrc = url.parse(apiSrcPath).pathname;
+            apiPath = path.join(apiDestPath, path.basename(apiSrc));
+
+            self.fetch(apiSrcPath, apiDestPath, function (err) {
+                if (err) {
+                    // safely exit based on the provided error
+                    // no need to call done as this will exit the program.
+                    self.env.error(err);
+                }
+                self.log.ok("API Spec %s written", apiPath);
+                self.config.set('apiPath', apiPath);
                 done();
+            });
+
+        },
+
+        validateSpec: function () {
+            var self, done;
+
+            self = this;
+            self.api = loadApi(self.config.get('apiPath'), self.read(self.config.get('apiPath')));
+
+            done = self.async();
+            enjoi(apischema).validate(self.api, function (error, value) {
+                if (error) {
+                    // safely exit based on the provided error
+                    // no need to call done as this will exit the program.
+                    self.env.error(error);
+                }
+                self.log.ok("API Spec is valid");
+                done();
+            });
+        },
+
+        app: function () {
+            if (!this.config.get('genProject')) {
+                debug("skipping project generation");
+                return;
             }
-        }.bind(this));
-    },
 
-    root: function () {
-        if (process.cwd() !== this.appRoot) {
-            this.mkdir(this.appRoot);
-            process.chdir(this.appRoot);
-        }
-    },
-
-    validate: function () {
-        var done = this.async();
-
-        this.api = this.api || yeoman.file.readJSON(this.apiPath);
-
-        enjoi(apischema).validate(this.api, function (error) {
-            done(error);
-        });
-    },
-
-    app: function () {
-        if (this.only.length === 0) {
-            this.mkdir('config');
+            if (this.options['dry-run']) {
+                this.log.ok("%s written", path.join(this.appRoot, '.jshintrc'));
+                this.log.ok("%s written", path.join(this.appRoot, '.gitignore'));
+                this.log.ok("%s written", path.join(this.appRoot, '.npmignore'));
+                this.log.ok("%s written", path.join(this.appRoot, 'package.json'));
+                this.log.ok("%s written", path.join(this.appRoot, 'README.md'));
+                this.log.ok("%s written", path.join(this.appRoot, 'server.js'));
+                return;
+            }
 
             this.copy('jshintrc', '.jshintrc');
             this.copy('gitignore', '.gitignore');
             this.copy('npmignore', '.npmignore');
 
-            this.template('server_' + this.framework + '.js', 'server.js', {
-                apiPath: path.relative(this.appRoot, path.join(this.appRoot, 'config/' + path.basename(this.apiPath)))
+            this.template('_package.json', 'package.json', this.config.getAll());
+            this.template('_README.md', 'README.md', {api: this.api, slugName: this.config.get('slugName')});
+
+            this.template('server_' + this.config.get('framework') + '.js', 'server.js', {
+                apiPath: path.relative(this.appRoot, this.config.get('apiPath'))
             });
-            this.template('_package.json', 'package.json');
-            this.template('_README.md', 'README.md');
-        }
+        },
 
-        //File
-        if (fs.existsSync(this.apiPath)) {
-            this.copy(this.apiPath, 'config/' + path.basename(this.apiPath));
-        }
-        //Url
-        else {
-            if (!fs.existsSync(this.apiPath)) {
-                this.write(this.apiPath, this.rawApi);
-            }
-        }
-    },
-
-    handlers: function () {
-        var routes, self;
-
-        if (this.only.length > 0 && !~this.only.indexOf('handlers')) {
-            return;
-        }
-
-        self = this;
-        routes = {};
-
-        this.mkdir('handlers');
-
-        Object.keys(this.api.paths).forEach(function (path) {
-            var pathnames, route;
-            var def = self.api.paths[path];
-
-            route = {
-                path: path,
-                pathname: undefined,
-                methods: [],
-                handler: undefined
-            };
-
-            pathnames = [];
-
-            path.split('/').forEach(function (element) {
-                if (element) {
-                    pathnames.push(element);
-                }
-            });
-
-            route.pathname = pathnames.join('/');
-
-            builderUtils.verbs.forEach(function (verb) {
-                var operation = self.api.paths[path][verb];
-
-                if (!operation) {
-                    return;
-                }
-
-                route.methods.push({
-                    method: verb,
-                    name: operation.operationId || '',
-                    description: operation.description || '',
-                    parameters: operation.parameters || [],
-                    produces: operation.produces || []
-                });
-
-                // if handler specified within specification then use that path
-                // else default to the route path.
-                route.handler = operation['x-handler'] || def['x-handler'] || route.pathname;
-            });
-
-            if (routes[route.pathname]) {
-                routes[route.pathname].methods.push.apply(routes[route.pathname].methods, route.methods);
+        database: function () {
+            if (!this.config.get('database')) {
+                debug("skipping database setup generation");
                 return;
             }
 
-            routes[route.pathname] = route;
-        });
-
-        Object.keys(routes).forEach(function (routePath) {
-            var handlername, route, file;
-
-            route = routes[routePath];
-            handlername = route.handler;
-
-            if (!~handlername.indexOf('handlers/')) {
-                handlername = 'handlers/' + route.handler;
-            }
-
-            if (!~handlername.indexOf('.js')) {
-                handlername += '.js';
-            }
-
-            file = path.join(self.appRoot, handlername);
-
-            if (fs.existsSync(file)) {
-                fs.writeFileSync(file, update.handlers(file, self.framework, route));
+            if (this.options['dry-run']) {
+                this.log.ok("%s written", path.join(this.appRoot, 'lib/lib_mongoose.js'));
+                this.log.ok("%s written", path.join(this.appRoot, 'config/databaseConfig.js'));
                 return;
             }
 
-            self.template('_handler_' + self.framework + '.js', file, route);
-        });
-    },
+            mkdirp.sync(path.join(this.appRoot, 'lib'));
+            this.template('lib_mongoose.js', 'lib/lib_mongoose.js', this.config.getAll());
+            this.template('databaseConfig.js', 'config/databaseConfig.js', {database: this.config.get('database')});
+        },
 
-    models: function () {
-        var self = this;
+        handlers: function () {
+            var routes, self;
 
-        if (this.only.length > 0 && !~this.only.indexOf('models')) {
-            return;
-        }
-
-        this.mkdir('models');
-
-        Object.keys(this.api.definitions || {}).forEach(function (modelName) {
-            var fileName, model;
-
-            fileName = modelName.toLowerCase() + '.js';
-
-            model = self.api.definitions[modelName];
-
-            if (!model.id) {
-                model.id = modelName;
+            if (!this.config.get('genHandlers')) {
+                debug("skipping api handlers generation");
+                return;
             }
 
-            self.template('_model.js', path.join(self.appRoot, 'models/' + fileName), model);
-        });
-    },
+            self = this;
+            routes = {};
 
-    tests: function () {
-        var self, api, models, resourcePath, handlersPath, modelsPath, apiPath;
+            if (!self.options['dry-run']) {
+                mkdirp.sync(path.join(self.appRoot, 'handlers'));
+            }
 
-        if (this.only.length > 0 && !~this.only.indexOf('tests')) {
-            return;
-        }
+            Object.keys(this.api.paths).forEach(function (path) {
+                var pathnames, route;
+                var def = self.api.paths[path];
 
-        this.mkdir('tests');
+                route = {
+                    path: path,
+                    pathname: undefined,
+                    methods: [],
+                    handler: undefined
+                };
 
-        self = this;
-        api = this.api;
-        models = {};
+                pathnames = [];
 
-        apiPath = path.relative(path.join(self.appRoot, 'tests'), path.join(self.appRoot, 'config/' + path.basename(this.apiPath)));
-        modelsPath = path.join(self.appRoot, 'models');
-        handlersPath = path.relative(path.join(self.appRoot, 'tests'), path.join(self.appRoot, 'handlers'));
-
-        if (api.definitions && modelsPath) {
-
-            Object.keys(api.definitions).forEach(function (key) {
-                var modelSchema, ModelCtor, options;
-
-                options = {};
-                modelSchema = api.definitions[key];
-                ModelCtor = require(path.join(self.appRoot, 'models/' + key.toLowerCase() + '.js'));
-
-                Object.keys(modelSchema.properties).forEach(function (prop) {
-                    var defaultValue;
-
-                    switch (modelSchema.properties[prop].type) {
-                        case 'integer':
-                        case 'number':
-                        case 'byte':
-                            defaultValue = 1;
-                            break;
-                        case 'string':
-                            defaultValue = 'helloworld';
-                            break;
-                        case 'boolean':
-                            defaultValue = true;
-                            break;
-                        default:
-                            break;
-                    }
-
-                    if (modelSchema.required && !!~modelSchema.required.indexOf(prop)) {
-                        options[prop] = defaultValue;
+                path.split('/').forEach(function (element) {
+                    if (element) {
+                        pathnames.push(element);
                     }
                 });
 
-                models[key] = new ModelCtor(options);
-            });
+                route.pathname = pathnames.join('/');
 
-        }
+                builderUtils.verbs.forEach(function (verb) {
+                    var operation = self.api.paths[path][verb];
 
-        resourcePath = api.basePath;
+                    if (!operation) {
+                        return;
+                    }
 
-        Object.keys(api.paths).forEach(function (opath) {
-            var fileName, operations;
+                    route.methods.push({
+                        method: verb,
+                        name: operation.operationId || '',
+                        description: operation.description || '',
+                        parameters: operation.parameters || [],
+                        produces: operation.produces || []
+                    });
 
-            operations = [];
+                    // if handler specified within specification then use that path
+                    // else default to the route path.
+                    route.handler = operation['x-handler'] || def['x-handler'] || route.pathname;
+                });
 
-            builderUtils.verbs.forEach(function (verb) {
-                var operation = {};
-
-                if (!api.paths[opath][verb]) {
+                if (routes[route.pathname]) {
+                    routes[route.pathname].methods.push.apply(routes[route.pathname].methods, route.methods);
                     return;
                 }
 
-                Object.keys(api.paths[opath][verb]).forEach(function (key) {
-                    operation[key] = api.paths[opath][verb][key];
+                routes[route.pathname] = route;
+            });
+
+            Object.keys(routes).forEach(function (routePath) {
+                var handlername, route, file;
+
+                route = routes[routePath];
+                handlername = route.handler;
+
+                if (!~handlername.indexOf('handlers/')) {
+                    handlername = 'handlers/' + route.handler;
+                }
+
+                if (!~handlername.indexOf('.js')) {
+                    handlername += '.js';
+                }
+
+                file = path.join(self.appRoot, handlername);
+
+                // existsSync has been deprecated; need to investage using
+                // self.fs.exists and corresponding write.
+                if (fs.existsSync(file)) {
+                    if (!self.options['dry-run']) {
+                        fs.writeFileSync(file, update.handlers(file, self.config.get('framework'), route));
+                    }
+                    self.log.ok("handler %s updated", file);
+                    return;
+                }
+
+                // provides access to lodash within the template
+                route._  = _;
+                if (!self.options['dry-run']) {
+                    self.template('_handler_' + self.config.get('framework') + '.js', file, route);
+                }
+                self.log.ok("handler %s generated", file);
+            });
+        },
+
+        models: function () {
+            var self = this;
+
+            if (!self.config.get('genModels')) {
+                debug("skipping api models generation");
+                return;
+            }
+
+            if (!self.options['dry-run']) {
+                mkdirp.sync(path.join(self.appRoot, 'models'));
+            }
+
+            Object.keys(this.api.definitions).forEach(function (modelName) {
+                var file, fileName, model;
+
+                fileName = modelName.toLowerCase() + '.js';
+
+                model = self.api.definitions[modelName];
+
+                if (!model.id) {
+                    model.id = modelName;
+                }
+
+                model.definitions = self.api.definitions;
+                // provides access to lodash within the template
+                model._ = _;
+
+                file = path.join(self.appRoot, 'models', fileName);
+                if (self.config.get('database')) {
+                    debug("generating mongoose enabled models");
+                    if (!self.options['dry-run']) {
+                        self.template('_model_mongoose.js', file, model);
+                    }
+                    self.log.ok("(db) model %s generated", file);
+                } else {
+                    debug("generating basic models");
+                    if (!self.options['dry-run']) {
+                        self.template('_model.js', file, model);
+                    }
+                    self.log.ok("model %s generated", file);
+                }
+            });
+        }
+
+        // this will need to become a subgenerator such that models and handlers are already written
+        // specifically the models as it attempts to require the file. But yeoman does not write the
+        // files until the very end of the process.
+/*
+        tests: function () {
+            var self, api, models, resourcePath, handlersPath, modelsPath, apiPath;
+
+            if (!this.config.get('genTests')) {
+                return;
+            }
+
+            mkdirp.sync(path.join(this.appRoot, 'tests'));
+
+            self = this;
+            api = this.api;
+            models = {};
+
+            apiPath = path.relative(path.join(self.appRoot, 'tests'), this.config.get('apiPath'));
+            modelsPath = path.join(self.appRoot, 'models');
+            handlersPath = path.relative(path.join(self.appRoot, 'tests'), path.join(self.appRoot, 'handlers'));
+
+            if (api.definitions && modelsPath) {
+
+                Object.keys(api.definitions).forEach(function (key) {
+                    var modelSchema, ModelCtor, options;
+
+                    options = {};
+                    modelSchema = api.definitions[key];
+                    ModelCtor = require(path.join(self.appRoot, 'models', key.toLowerCase() + '.js'));
+
+                    Object.keys(modelSchema.properties).forEach(function (prop) {
+                        var defaultValue;
+
+                        switch (modelSchema.properties[prop].type) {
+                            case 'integer':
+                            case 'number':
+                            case 'byte':
+                                defaultValue = 1;
+                                break;
+                            case 'string':
+                                defaultValue = 'helloworld';
+                                break;
+                            case 'boolean':
+                                defaultValue = true;
+                                break;
+                            default:
+                                break;
+                        }
+
+                        if (modelSchema.required && !!~modelSchema.required.indexOf(prop)) {
+                            options[prop] = defaultValue;
+                        }
+                    });
+
+                    models[key] = new ModelCtor(options);
                 });
 
-                operation.path = opath;
-                operation.method = verb;
+            }
+            resourcePath = api.basePath;
 
-                operations.push(operation);
+            Object.keys(api.paths).forEach(function (opath) {
+                var fileName, operations;
+
+                operations = [];
+
+                builderUtils.verbs.forEach(function (verb) {
+                    var operation = {};
+
+                    if (!api.paths[opath][verb]) {
+                        return;
+                    }
+
+                    Object.keys(api.paths[opath][verb]).forEach(function (key) {
+                        operation[key] = api.paths[opath][verb][key];
+                    });
+
+                    operation.path = opath;
+                    operation.method = verb;
+
+                    operations.push(operation);
+                });
+
+                fileName = path.join(self.appRoot, 'tests', 'test' + opath.replace(/\//g, '_') + '.js');
+
+                self.template('_test_' + this.config.get('framework') + '.js', fileName, {
+                    _: _,
+                    apiPath: apiPath,
+                    handlers: handlersPath,
+                    resourcePath: resourcePath,
+                    operations: operations,
+                    models: models
+                });
+
             });
+        }
+*/
+    },
 
-            fileName = path.join(self.appRoot, 'tests/test' + opath.replace(/\//g, '_') + '.js');
+    install: {
+        installNpm: function installNpm() {
+            if (this.options['skip-install']) {
+                this.log("skipping install");
+                return;
+            }
 
-            self.template('_test_' + self.framework + '.js', fileName, {
-                apiPath: apiPath,
-                handlers: handlersPath,
-                resourcePath: resourcePath,
-                operations: operations,
-                models: models
-            });
-
-        });
+            if (!this.options.only) {
+                if (!this.options['dry-run']) {
+                    this.npmInstall([], {"--quiet": true});
+                }
+                this.log("install complete");
+            }
+        }
     }
-
 });
 
 function loadApi(apiPath, content) {
     if (apiPath.indexOf('.yaml') === apiPath.length - 5 || apiPath.indexOf('.yml') === apiPath.length - 4) {
-        return jsYaml.load(content || fs.readFileSync(apiPath));
+        debug("loading api using yaml");
+        return jsYaml.load(content);
     }
-    return content ? JSON.parse(content) : yeoman.file.readJSON(apiPath);
+    debug("loading api using json");
+    return JSON.parse(content);
 }
 
 module.exports = ModuleGenerator;

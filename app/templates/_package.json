@@ -1,14 +1,14 @@
 {
-    "name" : "<%= _.slugify(appname) %>",
+    "name" : "<%= slugName %>",
     "description" : "",
     "version" : "0.1.0",
     "author" : "<%= creatorName %> <<%= email %>>",
     "contributors" : [],
     "repository" : {
         "type" : "git",
-        "url" : "git://github.com/<%= githubUser %>/<%= _.slugify(appname) %>.git"
+        "url" : "git://github.com/<%= githubUser %>/<%= slugName %>.git"
     },
-    "bugs" : "http://github.com/<%= githubUser %>/<%= _.slugify(appname) %>/issues",
+    "bugs" : "http://github.com/<%= githubUser %>/<%= slugName %>/issues",
     "publishConfig" : {
         "registry" : "https://registry.npmjs.org"
     },
@@ -18,11 +18,12 @@
     "dependencies": {<% if (framework === 'express') {%>
         "express": "^4.0.0",
         "body-parser": "^1.9.0",
-        "swaggerize-express": "^3.0.0"<%}%><% if (framework === 'hapi') {%>
+        "swaggerize-express": "^3.0.0",<%}%><% if (framework === 'hapi') {%>
         "hapi": "^8.0.0",
-        "swaggerize-hapi": "^1.0.0-"<%}%><% if (framework === 'restify') {%>
+        "swaggerize-hapi": "^1.0.0-",<%}%><% if (framework === 'restify') {%>
         "swaggerize-restify": "^2.0.0",
-        "restify": "^3.0.3"<%}%>
+        "restify": "^3.0.3",<%}%>
+        "mongoose": "^4.1.0"
     },
     "devDependencies": {
         "tape": "^3.0.0",
