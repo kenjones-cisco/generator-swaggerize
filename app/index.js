@@ -12,7 +12,7 @@ var util = require('util'),
     apischema = require('swagger-schema-official/schema'),
     builderUtils = require('swaggerize-routes/lib/utils'),
     enjoi = require('enjoi'),
-    gulpFilter = require('gulp-filter'),
+    gulpif = require('gulp-if'),
     beautify = require('gulp-beautify'),
     us = require('underscore.string'),
     update = require('./update');
@@ -582,10 +582,11 @@ var ModuleGenerator = yeoman.generators.Base.extend({
 
         finalize: function () {
             // enable beautify of all js files
-            var jsFilter = gulpFilter('**/*.js', {restore: true});
-            this.registerTransformStream(jsFilter);
-            this.registerTransformStream(beautify({jslint_happy: false}));
-            this.registerTransformStream(jsFilter.restore);
+            var condition = function (file) {
+                return path.extname(file.path) === '.js';
+            }
+
+            this.registerTransformStream(gulpif(condition, beautify({jslint_happy: true})));
         }
 
     },

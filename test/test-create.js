@@ -53,7 +53,7 @@ test('swagger-express generator', function(t) {
             helpers.mockPrompt(app, {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/pets.yaml'),
-                'framework': null,
+                'framework': null
             });
 
             app.options['skip-install'] = true;
@@ -134,7 +134,7 @@ test('swagger-express generator', function(t) {
             helpers.mockPrompt(app, {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/pets.yaml'),
-                'framework': null,
+                'framework': null
             });
 
             app.options['dry-run'] = true;
@@ -156,7 +156,7 @@ test('swagger-express generator', function(t) {
             helpers.mockPrompt(app, {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/pets.yaml'),
-                'framework': null,
+                'framework': null
             });
 
             app.options['dry-run'] = true;
@@ -178,7 +178,7 @@ test('swagger-express generator', function(t) {
             helpers.mockPrompt(app, {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/pets.yaml'),
-                'framework': null,
+                'framework': null
             });
 
             app.options['dry-run'] = true;
@@ -200,7 +200,7 @@ test('swagger-express generator', function(t) {
             helpers.mockPrompt(app, {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/pets.yaml'),
-                'framework': null,
+                'framework': null
             });
 
             app.options['dry-run'] = true;
@@ -227,7 +227,7 @@ test('swagger-express generator', function(t) {
             helpers.mockPrompt(app, {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/pets.yaml'),
-                'framework': null,
+                'framework': null
             });
             app.options['skip-install'] = true;
             app.options['dry-run'] = true;
@@ -250,7 +250,7 @@ test('swagger-express generator', function(t) {
             helpers.mockPrompt(app, {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/pets.yaml'),
-                'framework': null,
+                'framework': null
             });
             app.options['skip-install'] = true;
             app.options['dry-run'] = true;
@@ -273,7 +273,7 @@ test('swagger-express generator', function(t) {
             helpers.mockPrompt(app, {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/pets.yaml'),
-                'framework': null,
+                'framework': null
             });
             app.options['skip-install'] = true;
             app.options['dry-run'] = true;
@@ -296,7 +296,7 @@ test('swagger-express generator', function(t) {
             helpers.mockPrompt(app, {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/pets.yaml'),
-                'framework': null,
+                'framework': null
             });
             app.options['skip-install'] = true;
             app.options['dry-run'] = true;
@@ -396,7 +396,7 @@ test('swagger-express generator', function(t) {
             helpers.mockPrompt(app, {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/badapi.json'),
-                'framework': null,
+                'framework': null
             });
 
             app.options['skip-install'] = true;
@@ -417,7 +417,7 @@ test('swagger-express generator', function(t) {
             helpers.mockPrompt(app, {
                 'appname': appName,
                 'apiPath': null,
-                'framework': null,
+                'framework': null
             });
 
             app.options['skip-install'] = true;
