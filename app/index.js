@@ -317,6 +317,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'package.json'));
                 this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'README.md'));
                 this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'server.js'));
+                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'config', 'logger.js'));
                 return;
             }
 
@@ -324,6 +325,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             this.copy('jshintrc', '.jshintrc');
             this.copy('gitignore', '.gitignore');
             this.copy('npmignore', '.npmignore');
+            this.copy('_logger.js', path.join(this.appRoot, 'config', 'logger.js'));
 
             this.template('_package.json', 'package.json', this.config.getAll());
             this.template('_README.md', 'README.md', {api: this.api, slugName: this.config.get('slugName')});

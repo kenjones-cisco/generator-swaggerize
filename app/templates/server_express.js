@@ -1,7 +1,9 @@
 'use strict';
 
+var logger = require('./config/logger.js');
 var http = require('http');
 var express = require('express');
+var morgan = require('morgan');
 var bodyParser = require('body-parser');
 var swaggerize = require('swaggerize-express');
 var path = require('path');<% if (database) {%>
@@ -11,6 +13,7 @@ var app = express();
 
 var server = http.createServer(app);
 
+app.use(morgan('combined', {"stream": logger.stream}));
 app.use(bodyParser.json());
 
 <% if (database) {%>
