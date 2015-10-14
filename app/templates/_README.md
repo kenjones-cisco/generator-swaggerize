@@ -1,5 +1,5 @@
 # <%=slugName%>
 
 ```json
-<%=JSON.stringify(api, null, 2)%>
+<%-JSON.stringify(api, null, 2)%>
 ```

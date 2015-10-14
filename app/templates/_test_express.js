@@ -3,7 +3,10 @@
 var test = require('tape'),
     path = require('path'),
     express = require('express'),
-    enjoi = require('enjoi'),
+    bodyparser = require('body-parser'),
+    enjoi = require('enjoi'),<% if (isYaml) {%>
+    fs = require('fs'),
+    jsYaml = require('js-yaml'),<%}%>
     swaggerize = require('swaggerize-express'),
     request = require('supertest');
 
@@ -11,11 +14,12 @@ test('api', function (t) {
     var app = express();
 
     <% _.forEach(operations, function (operation) { if (operation.method.toLowerCase() === 'post' || operation.method.toLowerCase() === 'put') { %>
-    app.use(require('body-parser')());<%}});%>
+    app.use(bodyparser.urlencoded({ extended: false }));
+    app.use(bodyparser.json());<%}});%>
 
     app.use(swaggerize({
-        api: require('./<%=apiPath%>'),
-        handlers: path.join(__dirname, '<%=handlers%>')
+        api: path.resolve(path.join(__dirname, '<%=apiPath%>')),
+        handlers: path.resolve(path.join(__dirname, '<%=handlers%>'))
     }));
 
     <% _.forEach(operations, function (operation) {%>
@@ -56,8 +60,9 @@ test('api', function (t) {
         <%} if (responseSchema) {%>
         var responseSchema = enjoi({<% _.forEach(Object.keys(responseSchema), function (k, i) {%>
             '<%=k%>': <%-JSON.stringify(responseSchema[k])%><%if (i < Object.keys(responseSchema).length - 1) {%>, <%}%><%})%>
-        }, {
-            '#': require('<%=apiPath%>')
+        }, {<% if (isYaml) {%>
+            '#': jsYaml.load(fs.readFileSync(path.resolve(path.join(__dirname, '<%=apiPath%>'))))<%} else {%>
+            '#': require('<%=apiPath%>')<%}%>
         });
         <%}%>
 

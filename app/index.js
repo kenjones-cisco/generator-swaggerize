@@ -498,7 +498,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             api = this.api;
             models = {};
 
-            apiPath = path.relative(path.join(self.appRoot, 'tests'), this.config.get('apiPath'));
+            apiPath = path.relative(path.join(self.appRoot, 'tests'), self.config.get('apiPath'));
             modelsPath = path.join(self.appRoot, 'models');
             handlersPath = path.relative(path.join(self.appRoot, 'tests'), path.join(self.appRoot, 'handlers'));
 
@@ -583,7 +583,8 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                         handlers: handlersPath,
                         resourcePath: resourcePath,
                         operations: operations,
-                        models: models
+                        models: models,
+                        isYaml: isYaml(self.config.get('apiPath'))
                     });
                 } else {
                     self.log.ok("(DRY-RUN) test %s generated", file);
@@ -621,10 +622,17 @@ var ModuleGenerator = yeoman.generators.Base.extend({
     }
 });
 
+function isYaml(file) {
+    if (file.indexOf('.yaml') === file.length - 5 || file.indexOf('.yml') === file.length - 4) {
+        return true;
+    }
+    return false;
+}
+
 function loadApi(apiPath, content) {
-    if (apiPath.indexOf('.yaml') === apiPath.length - 5 || apiPath.indexOf('.yml') === apiPath.length - 4) {
+    if (isYaml(apiPath)) {
         debug("loading api using yaml");
-        return jsYaml.load(content);
+        return jsYaml.safeLoad(content);
     }
     debug("loading api using json");
     return JSON.parse(content);

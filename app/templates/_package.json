@@ -29,14 +29,15 @@
         "tape": "^3.0.0",
         "jshint": "^2.4.1",
         "istanbul": "~0.2.3",
+        "js-yaml": "^3.2.6",
         "enjoi": "~0.1.16"<% if (framework === 'express') {%> ,
         "supertest": "~0.13.0"<%}%><% if (framework === 'restify') {%> ,
         "supertest": "~0.13.0"<%}%>
     },
     "scripts": {
-        "test": "tape test/*.js",
-        "cover": "istanbul cover tape -- test/*.js",
-        "lint": "jshint -c .jshintrc lib/**/*.js"
+        "test": "tape tests/*.js",
+        "cover": "istanbul cover tape -- tests/*.js",
+        "lint": "jshint -c .jshintrc --exclude node_modules/"
     },
     "main" : "./server"
 }

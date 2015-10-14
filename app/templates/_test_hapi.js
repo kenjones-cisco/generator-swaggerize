@@ -3,7 +3,9 @@
 var Test = require('tape'),
     Path = require('path'),
     Hapi = require('hapi'),
-    Enjoi = require('enjoi'),
+    Enjoi = require('enjoi'),<% if (isYaml) {%>
+    fs = require('fs'),
+    jsYaml = require('js-yaml'),<%}%>
     Swaggerize = require('swaggerize-hapi');
 
 Test('api', function (t) {
@@ -19,8 +21,8 @@ Test('api', function (t) {
         server.register({
             register: Swaggerize,
             options: {
-                api: require('./<%=apiPath%>'),
-                handlers: Path.join(__dirname, '<%=handlers%>')
+                api: require(Path.resolve(Path.join(__dirname, '<%=apiPath%>'))),
+                handlers: Path.resolve(Path.join(__dirname, '<%=handlers%>'))
             }
         }, function (err) {
             t.error(err, 'No error.');
@@ -65,8 +67,9 @@ Test('api', function (t) {
         <%} if (responseSchema) {%>
         var responseSchema = Enjoi({<% _.forEach(Object.keys(responseSchema), function (k, i) {%>
             '<%=k%>': <%-JSON.stringify(responseSchema[k])%><%if (i < Object.keys(responseSchema).length - 1) {%>, <%}%><%})%>
-        }, {
-            '#': require('<%=apiPath%>')
+        }, {<% if (isYaml) {%>
+            '#': jsYaml.load(fs.readFileSync(Path.resolve(Path.join(__dirname, '<%=apiPath%>'))))<%} else {%>
+            '#': require(Path.resolve(Path.join(__dirname, '<%=apiPath%>')))<%}%>
         });
         <%}%>
         var options = {
