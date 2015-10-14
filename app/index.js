@@ -370,6 +370,9 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 });
 
                 route.pathname = pathnames.join('/');
+                // if handler specified within specification then use that path
+                // else default to the route path.
+                route.handler = def['x-handler'] || route.pathname;
 
                 builderUtils.verbs.forEach(function (verb) {
                     var operation = self.api.paths[path][verb];
@@ -386,9 +389,6 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                         produces: operation.produces || []
                     });
 
-                    // if handler specified within specification then use that path
-                    // else default to the route path.
-                    route.handler = operation['x-handler'] || def['x-handler'] || route.pathname;
                 });
 
                 if (routes[route.pathname]) {
@@ -541,7 +541,8 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             resourcePath = api.basePath;
 
             Object.keys(api.paths).forEach(function (opath) {
-                var fileName, operations;
+                var file, fileName, operations;
+                var def = api.paths[opath];
 
                 operations = [];
 
@@ -552,8 +553,8 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                         return;
                     }
 
-                    Object.keys(api.paths[opath][verb]).forEach(function (key) {
-                        operation[key] = api.paths[opath][verb][key];
+                    Object.keys(def[verb]).forEach(function (key) {
+                        operation[key] = def[verb][key];
                     });
 
                     operation.path = opath;
@@ -562,10 +563,21 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                     operations.push(operation);
                 });
 
-                fileName = path.join(self.appRoot, 'tests', 'test' + opath.replace(/\//g, '_') + '.js');
+                fileName = 'test' + opath.replace(/\//g, '_') + '.js';
+                if (def['x-handler']) {
+                    fileName = def['x-handler'];
+                    if (fileName.indexOf('handlers/') === 0) {
+                        fileName = 'test_' + fileName.substring(9, fileName.length);
+                    }
+
+                    if (!~fileName.indexOf('.js')) {
+                        fileName += '.js';
+                    }
+                }
+                file = path.join(self.appRoot, 'tests', fileName);
 
                 if (!self.options['dry-run']) {
-                    self.template('_test_' + self.config.get('framework') + '.js', fileName, {
+                    self.template('_test_' + self.config.get('framework') + '.js', file, {
                         _: _,
                         apiPath: apiPath,
                         handlers: handlersPath,
@@ -574,7 +586,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                         models: models
                     });
                 } else {
-                    self.log.ok("(DRY-RUN) test %s generated", fileName);
+                    self.log.ok("(DRY-RUN) test %s generated", file);
                 }
 
             });
@@ -584,7 +596,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             // enable beautify of all js files
             var condition = function (file) {
                 return path.extname(file.path) === '.js';
-            }
+            };
 
             this.registerTransformStream(gulpif(condition, beautify({jslint_happy: true})));
         }
