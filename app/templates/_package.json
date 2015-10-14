@@ -1,9 +1,9 @@
 {
     "name" : "<%= slugName %>",
     "description" : "",
-    "version" : "0.1.0",
-    "author" : "<%= creatorName %> <<%= email %>>",
-    "contributors" : [],
+    "version" : "0.1.0",<% if (creatorName) {%>
+    "author" : "<%= creatorName %> <<%= email %>>",<%}%>
+    "contributors" : [],<% if (githubUser) {%>
     "repository" : {
         "type" : "git",
         "url" : "git://github.com/<%= githubUser %>/<%= slugName %>.git"
@@ -11,7 +11,7 @@
     "bugs" : "http://github.com/<%= githubUser %>/<%= slugName %>/issues",
     "publishConfig" : {
         "registry" : "https://registry.npmjs.org"
-    },
+    },<%}%>
     "engines" : {
         "node" : "~0.10.22"
     },

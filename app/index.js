@@ -23,6 +23,8 @@ var FRAMEWORKS = ['express', 'hapi', 'restify'];
 var ModuleGenerator = yeoman.generators.Base.extend({
     initializing: {
         init: function () {
+            this.argument('name', { type: String, required: false });
+
             this.option('dry-run', {
                 type: Boolean,
                 desc: 'Do not make changes just display changes that would have been made',
@@ -52,25 +54,30 @@ var ModuleGenerator = yeoman.generators.Base.extend({
 
     prompting: {
         askAppNameEarly: function () {
+            if (this.name) {
+                debug("name provided on CLI %s", this.name);
+                return;
+            }
+
             var next = this.async();
 
             // Handle setting the root early, so .yo-rc.json ends up the right place.
             this.prompt([{
                 message: 'Project Name',
-                name: 'appname',
+                name: 'name',
                 default: this.appname
             }], function (props) {
                 debug("default appname was: %s", this.appname);
-                debug("appname provided: %s", props.appname);
-                this.appname = props.appname;
+                debug("appname provided: %s", props.name);
+                this.name = props.name;
                 next();
             }.bind(this));
         },
 
         setAppName: function () {
             var oldRoot = this.destinationRoot();
-            debug("cwd: %s", process.cwd());
-            debug("oldRoot: %s appName: %s", oldRoot, this.appname);
+            debug("oldRoot: %s appName: %s", oldRoot, this.name);
+            this.appname = this.name;
             if (path.basename(oldRoot) !== this.appname) {
                 this.destinationRoot(path.join(oldRoot, this.appname));
                 debug("updated destinationRoot to %s", this.destinationRoot());
@@ -80,19 +87,24 @@ var ModuleGenerator = yeoman.generators.Base.extend({
         },
 
         setDefaults: function() {
-            var genTypes, pkg;
+            var genTypes, githubUser;
             var options = this.options;
 
             if (options['dry-run']) {
                 this.log("Running in dry-run mode");
             }
 
+            githubUser = '';
+            if (this.user.git.email()) {
+                // requires user's email address to user service
+                githubUser = this.user.github.username();
+            }
             this.config.defaults({
                 appname: this.appname,
                 slugName: us.slugify(this.appname),
                 creatorName: this.user.git.name(),
                 email: this.user.git.email(),
-                githubUser: '', // this.user.github.username(),
+                githubUser: githubUser,
                 framework: options.framework,
                 apiPath: options.apiPath,
                 database: options.database,
@@ -122,6 +134,11 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                     this.log("test generation disabled");
                 }
             }
+
+        },
+
+        checkPackage: function checkPackage() {
+            var pkg;
 
             if (this.fs.exists(path.resolve('package.json'))) {
                 debug("found existing package.json");
@@ -195,6 +212,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
         validateConfigs: function () {
             // until the validate functions work on prompts, need to manually validate the
             // inputs provided by the user.
+            this.config.set('apiPath', findApiFile(this.config.get('apiPath'), this.env.cwd, this.appRoot));
             debug("apiPath = %s", this.config.get('apiPath'));
             if (!this.config.get('apiPath')) {
                 this.env.error(new Error('missing or invalid required input `apiPath`'));
@@ -203,7 +221,6 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             if (!this.config.get('framework') || !~FRAMEWORKS.indexOf(this.config.get('framework'))) {
                 this.env.error(new Error('missing or invalid required input `framework`'));
             }
-            debug("Using REST Framework %s", this.config.get('framework'));
         }
     },
 
@@ -312,7 +329,8 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             this.template('_README.md', 'README.md', {api: this.api, slugName: this.config.get('slugName')});
 
             this.template('server_' + this.config.get('framework') + '.js', 'server.js', {
-                apiPath: path.relative(this.appRoot, this.config.get('apiPath'))
+                apiPath: path.relative(this.appRoot, this.config.get('apiPath')),
+                database: this.config.get('database')
             });
         },
 
@@ -621,6 +639,28 @@ var ModuleGenerator = yeoman.generators.Base.extend({
         }
     }
 });
+
+function findApiFile(name, root, project) {
+    if (!name || name.indexOf('http') === 0) {
+        return name;
+    }
+    debug("name: %s root: %s project: %s", name, root, project);
+
+    var location;
+    location = path.resolve(root, name);
+    debug("resolve to root: %s", location);
+    if (fs.existsSync(location)) {
+        return location;
+    }
+
+    location = path.resolve(project, name);
+    debug("resolve to project: %s", location);
+    if (fs.existsSync(location)) {
+        return location;
+    }
+    debug("using default: %s", name);
+    return name;
+}
 
 function isYaml(file) {
     if (file.indexOf('.yaml') === file.length - 5 || file.indexOf('.yml') === file.length - 4) {
