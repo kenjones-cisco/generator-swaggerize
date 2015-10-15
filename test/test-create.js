@@ -324,6 +324,7 @@ test('swagger-express generator', function(t) {
                 'tests/test_petsByID.js',
                 'tests/test_pets.js',
                 'config',
+                'config/db.js',
                 'config/pets.yaml',
                 'config/logger.js',
                 'handlers',
@@ -338,7 +339,7 @@ test('swagger-express generator', function(t) {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/pets.yaml'),
                 'framework': null,
-                'database': 'db'
+                'database': 'testdb'
             });
 
             app.run(function() {
@@ -363,7 +364,7 @@ test('swagger-express generator', function(t) {
                 'appname': appName,
                 'apiPath': path.join(__dirname, 'fixtures/pets.yaml'),
                 'framework': null,
-                'database': 'db'
+                'database': 'drydb'
             });
 
             app.options['skip-install'] = true;

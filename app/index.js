@@ -343,15 +343,12 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             }
 
             if (this.options['dry-run']) {
-                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'lib', 'lib_mongoose.js'));
-                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'config', 'databaseConfig.js'));
+                this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'config', 'db.js'));
                 return;
             }
 
             debug("generating database configuration files");
-            mkdirp.sync(path.join(this.appRoot, 'lib'));
-            this.template('lib_mongoose.js', path.join('lib', 'lib_mongoose.js'), this.config.getAll());
-            this.template('databaseConfig.js', path.join('config', 'databaseConfig.js'),
+            this.template('_config_db.js', path.join('config', 'db.js'),
                 {database: this.config.get('database')});
         },
 
