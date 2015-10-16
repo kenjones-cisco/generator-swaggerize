@@ -25,5 +25,3 @@ app.use(swaggerize({
 app.listen(port, function () {
     logger.info("Listening on %s",  port);
 });
-
-module.exports = app; // for testing
