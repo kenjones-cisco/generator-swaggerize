@@ -11,6 +11,7 @@ var util = require('util'),
     jsYaml = require('js-yaml'),
     apischema = require('swagger-schema-official/schema'),
     builderUtils = require('swaggerize-routes/lib/utils'),
+    pluralize = require('pluralize'),
     enjoi = require('enjoi'),
     gulpif = require('gulp-if'),
     beautify = require('gulp-beautify'),
@@ -481,6 +482,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
 
                 // provides access to lodash within the template
                 route._  = _;
+                route.dbmodels = self._getDbModels(route);
                 if (!self.options['dry-run']) {
                     self.template('_handler_' + self.config.get('framework') + '.js', file, route);
                 } else {
@@ -621,6 +623,35 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 }
             }
         }
+    },
+
+    _getDbModels: function getDbModels(route) {
+        var self = this;
+        var dbModels = [];
+        var relPath = path.join(self.appRoot, 'handlers');
+        var single, dbFileName, className;
+
+        if (!self.config.get('database')) {
+            return null;
+        }
+
+        route.path.split('/').forEach(function (element) {
+            if (element) {
+                single = pluralize.singular(element);
+                debug("element: %s single: %s",element, single);
+                dbFileName = path.join(self.appRoot, 'models', single + '.js');
+                if (self.fs.exists(dbFileName)) {
+                    className = us.classify(single);
+                    dbModels.push({
+                        name: className,
+                        path: builderUtils.unsuffix(path.relative(relPath, dbFileName), '.js')
+                    });
+                }
+            }
+        });
+        debug(dbModels);
+        return dbModels;
+
     }
 });
 

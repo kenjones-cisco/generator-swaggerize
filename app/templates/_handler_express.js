@@ -1,4 +1,6 @@
 'use strict';
+<% _.forEach(dbmodels, function(dbmodel) {%>
+var <%=dbmodel.name%> = require('<%=dbmodel.path%>');<%})%>
 <%
 var refRegExp = /^#\/definitions\/(\w*)$/;
 
@@ -31,7 +33,7 @@ module.exports = {
         res.sendStatus(501);
         <% _.forEach(method.responses, function (response, key) {%>
         // <%=key%>: <%=response.description%><% if (response.schema) {%>
-        // res.status(<%=key%>).send(<%=formatSchema(response.schema)%>);<%} else {%>
+        // res.status(<%=key%>).json(<%=formatSchema(response.schema)%>);<%} else {%>
         // res.sendStatus(<%=key%>);<%}%>
         <%})%>
     }<%if (i < methods.length - 1) {%>, <%}%>
