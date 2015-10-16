@@ -79,4 +79,4 @@ var <%=id%>Model = function () {
     return mongoose.model(<%-"'"+id+"'"%>, <%=id%>Schema);
 };
 
-module.exports = new <%=id%>Model();
+module.exports = <%=id%>Model();

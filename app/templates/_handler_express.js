@@ -1,5 +1,23 @@
 'use strict';
+<%
+var refRegExp = /^#\/definitions\/(\w*)$/;
 
+var isSchemaHasRef = function(schema) {
+    return schema['$ref'] || ((schema['type'] === 'array') && (schema['items']['$ref']));
+};
+
+var formatSchema = function(schema) {
+    var output = {};
+    if (isSchemaHasRef(schema)) {
+        if (schema['$ref']) {
+            output = schema['$ref'].match(refRegExp)[1];
+        } else {
+            output = [schema['items']['$ref'].match(refRegExp)[1]];
+        }
+    }
+    return JSON.stringify(output).replace(/"/g,"");
+};
+%>
 /**
  * Operations on <%=path%>
  */
@@ -8,10 +26,14 @@ module.exports = {
     /**
      * <%=method.description%>
      * parameters: <%=method.parameters.map(function (p) { return p.name }).join(', ')%>
-     * produces: <%=method.produces && method.produces.join(', ')%>
      */
     <%=method.method%>: function <%=method.name%>(req, res) {
         res.sendStatus(501);
+        <% _.forEach(method.responses, function (response, key) {%>
+        // <%=key%>: <%=response.description%><% if (response.schema) {%>
+        // res.status(<%=key%>).send(<%=formatSchema(response.schema)%>);<%} else {%>
+        // res.sendStatus(<%=key%>);<%}%>
+        <%})%>
     }<%if (i < methods.length - 1) {%>, <%}%>
     <%})%>
 };

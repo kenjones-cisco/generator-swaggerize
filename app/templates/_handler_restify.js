@@ -8,7 +8,6 @@ module.exports = {
     /**
      * <%=method.description%>
      * parameters: <%=method.parameters.map(function (p) { return p.name }).join(', ')%>
-     * produces: <%=method.produces && method.produces.join(', ')%>
      */
     <%=method.method%>: function <%=method.name%>(req, res) {
         res.send(501);

@@ -352,6 +352,48 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 {database: this.config.get('database')});
         },
 
+        models: function () {
+            var self = this;
+
+            if (!self.config.get('genModels')) {
+                debug("skipping api models generation");
+                return;
+            }
+
+            if (!self.options['dry-run']) {
+                mkdirp.sync(path.join(self.appRoot, 'models'));
+            }
+
+            Object.keys(this.api.definitions).forEach(function (modelName) {
+                var file, fileName, model;
+
+                fileName = modelName.toLowerCase() + '.js';
+
+                model = self.api.definitions[modelName];
+                model.id = modelName;
+                model.definitions = self.api.definitions;
+                // provides access to lodash within the template
+                model._ = _;
+
+                file = path.join(self.appRoot, 'models', fileName);
+                if (self.config.get('database')) {
+                    debug("generating mongoose enabled models");
+                    if (!self.options['dry-run']) {
+                        self.template('_model_mongoose.js', file, model);
+                    } else {
+                        self.log.ok("(DRY-RUN) (db) model %s generated", file);
+                    }
+                } else {
+                    debug("generating basic models");
+                    if (!self.options['dry-run']) {
+                        self.template('_model.js', file, model);
+                    } else {
+                        self.log.ok("(DRY-RUN) model %s generated", file);
+                    }
+                }
+            });
+        },
+
         handlers: function () {
             var routes, self;
 
@@ -403,7 +445,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                         name: operation.operationId || '',
                         description: operation.description || '',
                         parameters: operation.parameters || [],
-                        produces: operation.produces || []
+                        responses: operation.responses
                     });
 
                 });
@@ -421,14 +463,8 @@ var ModuleGenerator = yeoman.generators.Base.extend({
 
                 route = routes[routePath];
                 handlername = route.handler;
-
-                if (!~handlername.indexOf('handlers/')) {
-                    handlername = 'handlers/' + route.handler;
-                }
-
-                if (!~handlername.indexOf('.js')) {
-                    handlername += '.js';
-                }
+                handlername = builderUtils.prefix(handlername, 'handlers/');
+                handlername = builderUtils.suffix(handlername, '.js');
 
                 file = path.join(self.appRoot, handlername);
 
@@ -449,52 +485,6 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                     self.template('_handler_' + self.config.get('framework') + '.js', file, route);
                 } else {
                     self.log.ok("(DRY-RUN) handler %s generated", file);
-                }
-            });
-        },
-
-        models: function () {
-            var self = this;
-
-            if (!self.config.get('genModels')) {
-                debug("skipping api models generation");
-                return;
-            }
-
-            if (!self.options['dry-run']) {
-                mkdirp.sync(path.join(self.appRoot, 'models'));
-            }
-
-            Object.keys(this.api.definitions).forEach(function (modelName) {
-                var file, fileName, model;
-
-                fileName = modelName.toLowerCase() + '.js';
-
-                model = self.api.definitions[modelName];
-
-                if (!model.id) {
-                    model.id = modelName;
-                }
-
-                model.definitions = self.api.definitions;
-                // provides access to lodash within the template
-                model._ = _;
-
-                file = path.join(self.appRoot, 'models', fileName);
-                if (self.config.get('database')) {
-                    debug("generating mongoose enabled models");
-                    if (!self.options['dry-run']) {
-                        self.template('_model_mongoose.js', file, model);
-                    } else {
-                        self.log.ok("(DRY-RUN) (db) model %s generated", file);
-                    }
-                } else {
-                    debug("generating basic models");
-                    if (!self.options['dry-run']) {
-                        self.template('_model.js', file, model);
-                    } else {
-                        self.log.ok("(DRY-RUN) model %s generated", file);
-                    }
                 }
             });
         },
@@ -583,13 +573,8 @@ var ModuleGenerator = yeoman.generators.Base.extend({
                 fileName = 'test' + opath.replace(/\//g, '_') + '.js';
                 if (def['x-handler']) {
                     fileName = def['x-handler'];
-                    if (fileName.indexOf('handlers/') === 0) {
-                        fileName = 'test_' + fileName.substring(9, fileName.length);
-                    }
-
-                    if (!~fileName.indexOf('.js')) {
-                        fileName += '.js';
-                    }
+                    fileName = 'test_' + builderUtils.unprefix(fileName, 'handlers/');
+                    fileName = builderUtils.suffix(fileName, '.js');
                 }
                 file = path.join(self.appRoot, 'tests', fileName);
 
@@ -662,7 +647,7 @@ function findApiFile(name, root, project) {
 }
 
 function isYaml(file) {
-    if (file.indexOf('.yaml') === file.length - 5 || file.indexOf('.yml') === file.length - 4) {
+    if (builderUtils.endsWith(file, '.yaml') || builderUtils.endsWith(file, '.yml')) {
         return true;
     }
     return false;
