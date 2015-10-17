@@ -355,6 +355,7 @@ var ModuleGenerator = yeoman.generators.Base.extend({
 
         models: function () {
             var self = this;
+            var models = {};
 
             if (!self.config.get('genModels')) {
                 debug("skipping api models generation");
@@ -366,16 +367,35 @@ var ModuleGenerator = yeoman.generators.Base.extend({
             }
 
             Object.keys(this.api.definitions).forEach(function (modelName) {
-                var file, fileName, model;
-
-                fileName = modelName.toLowerCase() + '.js';
+                var model;
 
                 model = self.api.definitions[modelName];
+                if (model['x-parent']) {
+                    debug("parent: %s", model['x-parent']);
+                    // if we have a parent then let our parent handle our setup.
+                    return;
+                }
                 model.id = modelName;
-                model.definitions = self.api.definitions;
                 // provides access to lodash within the template
                 model._ = _;
+                model.children = {};
 
+                if (model['x-children']) {
+                    debug("children: %s",model['x-children']);
+                    _.forEach(model['x-children'], function (childName, key) {
+                        debug("childName: %s", childName);
+                        model.children[childName] = self.api.definitions[childName];
+                    });
+                }
+
+                models[modelName] = model;
+            });
+
+            Object.keys(models).forEach(function (modelName) {
+                var file, fileName, model;
+
+                model = models[modelName];
+                fileName = modelName.toLowerCase() + '.js';
                 file = path.join(self.appRoot, 'models', fileName);
                 if (self.config.get('database')) {
                     debug("generating mongoose enabled models");

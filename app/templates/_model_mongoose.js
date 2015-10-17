@@ -37,17 +37,23 @@ var isPropertyHasRef = function(property) {
     return property['$ref'] || ((property['type'] == 'array') && (property['items']['$ref']));
 };
 
-var getSchema = function(object, definitions) {
+var getSchema = function(object, subSchema) {
     var props = {};
+    subSchema = subSchema || {};
+
     _.forEach(object, function (property, key) {
         if (isPropertyHasRef(property)) {
             var refRegExp = /^#\/definitions\/(\w*)$/;
             var refString = property['$ref'] ? property['$ref'] : property['items']['$ref'];
             var propType = refString.match(refRegExp)[1];
-            props[key] = getSchema(definitions[propType]['properties'] ? definitions[propType]['properties'] : definitions[propType], definitions);
+            if (subSchema[propType]) {
+                props[key] = [propType + 'Schema'];
+            } else {
+                props[key] = {type: "mongoose.Schema.Types.ObjectId", ref: "'" + propType + "'"}
+            }
         }
 		else if (property.type === 'object') {
-            props[key] = getSchema(property.properties, definitions);
+            props[key] = getSchema(property.properties, subSchema);
 		}
         else if (property.type) {
             props[key] = propertyMap(property);
@@ -64,10 +70,10 @@ var formatProperty = function(property) {
     return JSON.stringify(property).replace(/"/g,"");
 };%>
 
-var <%=id%>Model = function () {
-
-    var <%=id%>Schema = mongoose.Schema({<%
-        var props = getSchema(properties, definitions);
+var <%=id%> = function () {
+<% _.forEach(children, function (child, childName) {%>
+    var <%=childName%>Schema = mongoose.Schema({<%
+        var props = getSchema(child.properties);
         var totalProps = 1;
         if (typeof props === 'object') {
             totalProps = Object.keys(props).length;
@@ -75,8 +81,20 @@ var <%=id%>Model = function () {
         var cnt = 0;
         _.forEach(props, function (property, key) {%>
         <%=key%>: <%=formatProperty(property)%><% if (totalProps - 1 !== cnt ) { %>,<% cnt += 1; }; %><%})%>
+    });
+<%})%>
+
+    var <%=id%>Schema = mongoose.Schema({<%
+        var props = getSchema(properties, children);
+        var totalProps = 1;
+        if (typeof props === 'object') {
+            totalProps = Object.keys(props).length;
+        }
+        var cnt = 0;
+        _.forEach(props, function (property, key) {%>
+        <%=key%>: <%-formatProperty(property)%><% if (totalProps - 1 !== cnt ) { %>,<% cnt += 1; }; %><%})%>
 	});
     return mongoose.model(<%-"'"+id+"'"%>, <%=id%>Schema);
 };
 
-module.exports = <%=id%>Model();
+module.exports = <%=id%>();
