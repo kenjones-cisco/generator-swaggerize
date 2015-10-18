@@ -7,7 +7,7 @@ var util = require('util'),
     fs = require('fs'),
     _ = require('lodash'),
     mkdirp = require('mkdirp'),
-    yeoman = require('yeoman-generator'),
+    generators = require('yeoman-generator'),
     jsYaml = require('js-yaml'),
     apischema = require('swagger-schema-official/schema'),
     builderUtils = require('swaggerize-routes/lib/utils'),
@@ -21,7 +21,7 @@ var util = require('util'),
 var debug = require('debuglog')('generator-swaggerize');
 var FRAMEWORKS = ['express', 'hapi', 'restify'];
 
-var ModuleGenerator = yeoman.generators.Base.extend({
+module.exports = generators.Base.extend({
     initializing: {
         init: function () {
             this.argument('name', { type: String, required: false });
@@ -211,13 +211,6 @@ var ModuleGenerator = yeoman.generators.Base.extend({
         },
 
         validateConfigs: function () {
-            // until the validate functions work on prompts, need to manually validate the
-            // inputs provided by the user.
-            this.config.set('apiPath', findApiFile(this.config.get('apiPath'), this.env.cwd, this.appRoot));
-            debug("apiPath = %s", this.config.get('apiPath'));
-            if (!this.config.get('apiPath')) {
-                this.env.error(new Error('missing or invalid required input `apiPath`'));
-            }
             debug("framework = %s", this.config.get('framework'));
             if (!this.config.get('framework') || !~FRAMEWORKS.indexOf(this.config.get('framework'))) {
                 this.env.error(new Error('missing or invalid required input `framework`'));
@@ -226,51 +219,43 @@ var ModuleGenerator = yeoman.generators.Base.extend({
     },
 
     writing: {
-        captureSpecLocal: function () {
+        copyLocal: function () {
             var apiSrc, apiSrcPath, apiDestPath, apiPath;
 
-            if (this.config.get('apiPath').indexOf('http') === 0) {
+            apiSrcPath = findFile(this.config.get('apiPath'), this.env.cwd, this.appRoot);
+            debug("apiPath is file: %s", apiSrcPath);
+            if (!apiSrcPath) {
+                this.env.error(new Error('missing or invalid required input `apiPath`'));
+            }
+
+            if (this._isRemote(apiSrcPath)) {
                 return;
             }
 
-            apiSrcPath = this.config.get('apiPath');
-            debug("apiPath is file: %s", apiSrcPath);
-
-            apiDestPath = path.join(this.appRoot, 'config');
-            if (this.options['dry-run']) {
-                this.log("(DRY-RUN) using temp location %s", path.join(os.tmpdir(), 'config'));
-                apiDestPath = path.join(os.tmpdir(), 'config');
-            }
-            mkdirp.sync(apiDestPath);
-
+            apiDestPath = this._prepareDest();
             apiSrc = path.resolve(apiSrcPath);
             apiPath = path.join(apiDestPath, path.basename(apiSrc));
+
             this.copy(apiSrc, apiPath);
             this.log.ok("API Spec %s written", apiPath);
             this.config.set('apiPath', apiPath);
 
         },
 
-        captureSpecRemote: function () {
+        copyRemote: function () {
             var apiSrc, apiSrcPath, apiDestPath, apiPath, done, self;
 
-            if (this.config.get('apiPath').indexOf('http') !== 0) {
+            apiSrcPath = this.config.get('apiPath');
+            debug("apiPath is URL: %s", apiSrcPath);
+
+            if (!this._isRemote(apiSrcPath)) {
                 return;
             }
 
             self = this;
             done = self.async();
 
-            apiSrcPath = self.config.get('apiPath');
-            debug("apiPath is URL: %s", apiSrcPath);
-
-            apiDestPath = path.join(self.appRoot, 'config');
-            if (self.options['dry-run']) {
-                self.log("(DRY-RUN) using temp location %s", path.join(os.tmpdir(), 'config'));
-                apiDestPath = path.join(os.tmpdir(), 'config');
-            }
-            mkdirp.sync(apiDestPath);
-
+            apiDestPath = this._prepareDest();
             apiSrc = url.parse(apiSrcPath).pathname;
             apiPath = path.join(apiDestPath, path.basename(apiSrc));
 
@@ -645,6 +630,21 @@ var ModuleGenerator = yeoman.generators.Base.extend({
         }
     },
 
+    _prepareDest: function () {
+        var apiDestPath = this.destinationPath('config');
+        if (this.options['dry-run']) {
+            this.log("(DRY-RUN) using temp location %s", path.join(os.tmpdir(), 'config'));
+            apiDestPath = path.join(os.tmpdir(), 'config');
+        }
+        mkdirp.sync(apiDestPath);
+
+        return apiDestPath;
+    },
+
+    _isRemote: function (apiPath) {
+        return apiPath.indexOf('http') === 0;
+    },
+
     _getDbModels: function getDbModels(route) {
         var self = this;
         var dbModels = [];
@@ -675,13 +675,14 @@ var ModuleGenerator = yeoman.generators.Base.extend({
     }
 });
 
-function findApiFile(name, root, project) {
-    if (!name || name.indexOf('http') === 0) {
-        return name;
-    }
+function findFile(name, root, project) {
+    var location;
     debug("name: %s root: %s project: %s", name, root, project);
 
-    var location;
+    if (!name) {
+        return name;
+    }
+
     location = path.resolve(root, name);
     debug("resolve to root: %s", location);
     if (fs.existsSync(location)) {
@@ -712,5 +713,3 @@ function loadApi(apiPath, content) {
     debug("loading api using json");
     return JSON.parse(content);
 }
-
-module.exports = ModuleGenerator;
