@@ -25,7 +25,8 @@
         "swaggerize-hapi": "^1.0.0-",<%}%><% if (framework === 'restify') {%>
         "swaggerize-restify": "^2.0.0",
         "restify": "^3.0.3",<%}%>
-        "mongoose": "^4.1.0"
+        "mongoose": "^4.1.0",
+        "lodash": "^3.10.0"
     },
     "devDependencies": {
         "tape": "^3.0.0",
