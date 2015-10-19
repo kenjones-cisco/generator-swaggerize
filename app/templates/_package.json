@@ -28,8 +28,12 @@
         "mongoose": "^4.1.0",
         "lodash": "^3.10.0"
     },
-    "devDependencies": {
-        "tape": "^3.0.0",
+    "devDependencies": {<% if (test === 'tape') {%>
+        "tape": "^3.0.0",<%} else if (test === 'jasmine') {%>
+        "gulp": "^3.9.0",
+        "gulp-jasmine": "^2.1.0",
+        "gulp-jshint": "^1.11.2",
+        "gulp-istanbul": "^0.10.2",<%}%>
         "jshint": "^2.4.1",
         "istanbul": "~0.2.3",
         "js-yaml": "^3.2.6",
@@ -37,10 +41,13 @@
         "supertest": "~0.13.0"<%}%><% if (framework === 'restify') {%> ,
         "supertest": "~0.13.0"<%}%>
     },
-    "scripts": {
+    "scripts": {<% if (test === 'tape') {%>
         "test": "tape tests/*.js",
         "cover": "istanbul cover tape -- tests/*.js",
-        "lint": "jshint -c .jshintrc --exclude node_modules/"
+        "lint": "jshint -c .jshintrc --exclude node_modules/"<%} else if (test === 'jasmine') {%>
+        "test": "gulp test",
+        "cover": "gulp cover",
+        "lint": "gulp lint"<%}%>
     },
     "main" : "./server"
 }

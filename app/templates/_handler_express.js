@@ -108,7 +108,7 @@ module.exports = {
     switch (getPathType(path, method.method)) {
         case 'getResources':%>
         var query = req.query;
-        var filters = {}
+        var filters = {};
         var fields = null;
         var options = {};
 
@@ -123,23 +123,23 @@ module.exports = {
 
                 case 'sort':
                     if (item) {
-                        options['sort'] = item.replace(',', ' ');
+                        options[key] = item.replace(',', ' ');
                     }
                     break;
 
                 case 'offset':
                     if (item && !_.isNaN(_.parseInt(item))) {
-                        options['skip'] = _.parseInt(item);
+                        options[key] = _.parseInt(item);
                     }
                     break;
 
                 case 'limit':
                     if (item && !_.isNaN(_.parseInt(item))) {
-                        options['limit'] = _.parseInt(item);
+                        options[key] = _.parseInt(item);
                     }
                     break;
                 default:
-                    filter[key] = item;
+                    filters[key] = item;
             }
         });
 

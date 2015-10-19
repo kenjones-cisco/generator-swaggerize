@@ -20,6 +20,7 @@ var util = require('util'),
 
 var debug = require('debuglog')('generator-swaggerize');
 var FRAMEWORKS = ['express', 'hapi', 'restify'];
+var TEST_FRAMEWORKS = ['tape', 'jasmine'];
 
 module.exports = generators.Base.extend({
     initializing: {
@@ -37,15 +38,19 @@ module.exports = generators.Base.extend({
             });
             this.option('framework', {
                 type: String,
-                desc: 'specify REST framework [express, hapi, restify]'
+                desc: 'Specify REST framework [express, hapi, restify]'
             });
             this.option('apiPath', {
                 type: String,
-                desc: 'specifiy local path or URL of Swagger API spec'
+                desc: 'Specifiy local path or URL of Swagger API spec'
             });
             this.option('database', {
                 type: String,
                 desc: 'The database name to use with mongoose'
+            });
+            this.option('test', {
+                type: String,
+                desc: 'Specify Test Framework [tape, jasmine]'
             });
 
             this.log('Swaggerize Generator');
@@ -109,6 +114,7 @@ module.exports = generators.Base.extend({
                 framework: options.framework,
                 apiPath: options.apiPath,
                 database: options.database,
+                test: options.test,
                 genProject: true,
                 genModels: true,
                 genHandlers: true,
@@ -191,6 +197,17 @@ module.exports = generators.Base.extend({
                     when: function () {
                         return !self.config.get('database');
                     }
+                },
+
+                {
+                    message: 'Test Framework',
+                    name: 'test',
+                    type: 'input',
+                    default: 'tape',
+                    when: function () {
+                        return !self.config.get('test');
+                    },
+                    choices: TEST_FRAMEWORKS
                 }
 
             ];
@@ -214,6 +231,14 @@ module.exports = generators.Base.extend({
             debug("framework = %s", this.config.get('framework'));
             if (!this.config.get('framework') || !~FRAMEWORKS.indexOf(this.config.get('framework'))) {
                 this.env.error(new Error('missing or invalid required input `framework`'));
+            }
+            debug("test framework = %s", this.config.get('test'));
+            if (!this.config.get('test') || !~TEST_FRAMEWORKS.indexOf(this.config.get('test'))) {
+                this.env.error(new Error('missing or invalid required input `test`'));
+            }
+            if (this.config.get('test') !== 'tape' && this.config.get('framework') !== 'express') {
+                this.log("express is only framework enabled for jasmine, falling back to tape");
+                this.config.set('test', 'tape');
             }
         }
     },
@@ -302,6 +327,9 @@ module.exports = generators.Base.extend({
                 this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, '.npmignore'));
                 this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'package.json'));
                 this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'README.md'));
+                if (this.config.get('test') === 'jasmine') {
+                    this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'gulpfile.js'));
+                }
                 this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'server.js'));
                 this.log.ok("(DRY-RUN) %s written", path.join(this.appRoot, 'config', 'logger.js'));
                 return;
@@ -316,6 +344,9 @@ module.exports = generators.Base.extend({
             this.template('_package.json', 'package.json', this.config.getAll());
             this.template('_README.md', 'README.md', {api: this.api, slugName: this.config.get('slugName')});
 
+            if (this.config.get('test') === 'jasmine') {
+                this.copy('_gulpfile.js', 'gulpfile.js');
+            }
             this.template('server_' + this.config.get('framework') + '.js', 'server.js', {
                 apiPath: path.relative(this.appRoot, this.config.get('apiPath')),
                 database: this.config.get('database')
@@ -555,7 +586,7 @@ module.exports = generators.Base.extend({
             resourcePath = api.basePath;
 
             Object.keys(api.paths).forEach(function (opath) {
-                var file, fileName, operations;
+                var file, fileName, operations, template;
                 var def = api.paths[opath];
 
                 operations = [];
@@ -586,7 +617,12 @@ module.exports = generators.Base.extend({
                 file = path.join(self.appRoot, 'tests', fileName);
 
                 if (!self.options['dry-run']) {
-                    self.template('_test_' + self.config.get('framework') + '.js', file, {
+                    if (self.config.get('test') === 'jasmine') {
+                        template = '_test_express_jasmine.js';
+                    } else {
+                        template = '_test_' + self.config.get('framework') + '.js';
+                    }
+                    self.template(template, file, {
                         _: _,
                         apiPath: apiPath,
                         handlers: handlersPath,

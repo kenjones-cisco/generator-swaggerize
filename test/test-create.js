@@ -345,10 +345,6 @@ test('swagger-express generator', function(t) {
             app.run(function() {
                 expected.forEach(function(file) {
                     t.ok(fs.existsSync(path.join(testDir, file)), 'file exists.');
-
-                    if (file === 'tests/test_petsByID.js') {
-                        t.ok(require(path.resolve(process.cwd(), path.join(testDir, file))), 'generated test passes');
-                    }
                 });
                 t.end();
             });
