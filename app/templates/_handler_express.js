@@ -227,9 +227,9 @@ module.exports = {
             _.each(req.body, function(v, k) {
                 subDoc[k] = v;
             });
-            result.save(function (err) {
-                if (err) {
-                    res.status(500).send({error: err});
+            result.save(function (saveErr) {
+                if (saveErr) {
+                    res.status(500).send({error: saveErr});
                 }
             });
             <%=formatSuccessResponse(method.responses, 'subDoc')%>
@@ -257,9 +257,9 @@ module.exports = {
                 res.sendStatus(404);
             }
             result.<%=subModelAttribute%>.id(req.params.id).remove();
-            result.save(function (err) {
-                if (err) {
-                    res.status(500).send({error: err});
+            result.save(function (saveErr) {
+                if (saveErr) {
+                    res.status(500).send({error: saveErr});
                 }
             });
             <%=formatSuccessResponse(method.responses, 'result')%>
@@ -283,9 +283,9 @@ module.exports = {
             if (!subDoc) {
                 res.sendStatus(400);
             }
-            result.save(function (err) {
-                if (err) {
-                    res.status(500).send({error: err});
+            result.save(function (saveErr) {
+                if (saveErr) {
+                    res.status(500).send({error: saveErr});
                 }
             });
             <%=formatSuccessResponse(method.responses, 'subDoc')%>

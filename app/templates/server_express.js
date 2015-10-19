@@ -14,7 +14,7 @@ mongoDb.setupDatabase(logger);<%}%>
 var port = Number(process.env.PORT || 8000);
 var app = express();
 
-app.use(morgan('combined', {"stream": logger.stream}));
+app.use(morgan('combined', {'stream': logger.stream}));
 app.use(bodyParser.json());
 
 app.use(swaggerize({
@@ -23,5 +23,5 @@ app.use(swaggerize({
 }));
 
 app.listen(port, function () {
-    logger.info("Listening on %s",  port);
+    logger.info('Listening on %s',  port);
 });
