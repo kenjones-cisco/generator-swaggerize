@@ -97,7 +97,7 @@ module.exports = {
      * parameters: <%=method.parameters.map(function (p) { return p.name }).join(', ')%>
      */
     <%=method.method%>: function <%=method.name%>(req, res) {
-    <% if (!dbmodels) {%>
+    <% if (dbmodels === null || dbmodels.length === 0) {%>
         res.sendStatus(501);
     <%
         return;
