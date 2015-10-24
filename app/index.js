@@ -414,7 +414,7 @@ module.exports = generators.Base.extend({
                 fileName = modelName.toLowerCase() + '.js';
                 file = path.join(self.appRoot, 'models', fileName);
                 if (self.config.get('database')) {
-                    debug("generating mongoose enabled models");
+                    debug("generating mongoose enabled model: %s", modelName);
                     if (!self.options['dry-run']) {
                         self.template('_model_mongoose.js', file, model);
                     } else {

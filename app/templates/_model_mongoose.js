@@ -1,7 +1,7 @@
 'use strict';
 var mongoose = require('mongoose');
 <%
-var allowedTypes = ['integer', 'long', 'float', 'double', 'number', 'string', 'password', 'boolean', 'date', 'dateTime', 'array'];
+var allowedTypes = ['integer', 'long', 'float', 'double', 'number', 'string', 'password', 'boolean', 'date', 'dateTime', 'array', 'object'];
 var propertyMap = function (property) {
     switch (property.type) {
         case 'integer':
@@ -20,6 +20,8 @@ var propertyMap = function (property) {
             return 'Date';
         case 'array':
             return [propertyMap(property.items)];
+        case 'object':
+            return getSchema(property.properties);
         default:
             throw new Error('Unrecognized schema type: ' + property.type);
     }
@@ -52,9 +54,9 @@ var getSchema = function(object, subSchema) {
                 props[key] = {type: "mongoose.Schema.Types.ObjectId", ref: "'" + propType + "'"}
             }
         }
-		else if (property.type === 'object') {
+        else if (property.type === 'object') {
             props[key] = getSchema(property.properties, subSchema);
-		}
+        }
         else if (property.type) {
             props[key] = propertyMap(property);
         }
