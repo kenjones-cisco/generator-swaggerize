@@ -8,20 +8,44 @@ var swaggerize = require('swaggerize-express');
 var logger = require('./config/logger');
 
 <% if (database) {%>
-var mongoDb = require('./config/db');
-mongoDb.setupDatabase(logger);<%}%>
+var mongoDb = require('./config/db');<%}%>
 
-var port = Number(process.env.PORT || 8000);
-var app = express();
 
-app.use(morgan('combined', {'stream': logger.stream}));
-app.use(bodyParser.json());
+var server = module.exports;
 
-app.use(swaggerize({
-    api: path.resolve('./<%=apiPath%>'),
-    handlers: path.resolve('./handlers')
-}));
+server.configure = function () {
 
-app.listen(port, function () {
-    logger.info('Listening on %s',  port);
-});
+    <% if (database) {%>
+    // make sure the database connection is setup
+    mongoDb.setupDatabase(logger);<%}%>
+
+    this.app = express();
+
+    this.app.use(morgan('combined', {
+        'stream': logger.stream
+    }));
+    this.app.use(bodyParser.json());
+
+    this.app.use(swaggerize({
+        api: path.resolve('./<%=apiPath%>'),
+        handlers: path.resolve('./handlers')
+    }));
+
+}.bind(this);
+
+/* istanbul ignore next */
+server.start = function () {
+    var port = Number(process.env.PORT || 8000);
+
+    // configure the app for use
+    this.configure();
+
+    this.app.listen(port, function () {
+        logger.info('Listening on %s', port);
+    });
+}.bind(this);
+
+/* istanbul ignore if */
+if (require.main === module) {
+    this.start();
+}

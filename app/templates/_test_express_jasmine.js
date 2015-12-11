@@ -1,9 +1,9 @@
-var request = require('supertest');
-var path = require('path');
-var express = require('express');
-var bodyparser = require('body-parser');
-var swaggerize = require('swaggerize-express');
+'use strict';
 
+var request = require('supertest');
+var server = require('../server');
+
+server.configure();
 
 <%
 var prevPath;
@@ -13,12 +13,7 @@ _.forEach(operations, function (operation) {
         prevPath = operation.path;
 %>
 describe('<%=operation.path%> tests', function () {
-    var app = express();
-    app.use(bodyparser.json());
-    app.use(swaggerize({
-        api: path.resolve(path.join(__dirname, '<%=apiPath%>')),
-        handlers: path.resolve(path.join(__dirname, '<%=handlers%>'))
-    }));
+    var app = server.app;
 <%
     }
     if (!prevVerb || prevVerb !== operation.method) {
@@ -45,7 +40,7 @@ describe('<%=operation.path%> tests', function () {
             '<%=k%>': <%-JSON.stringify(sendData[k])%><%if (i < Object.keys(sendData).filter(function (k) { return !!sendData[k]; }).length - 1) {%>, <%}%><%})%>
             };<%}%>
             request(app)
-                .<%=operation.method%>('<%=operation.path%>')<% if (sendData) {%>
+                .<%=operation.method%>('<%=resourcePath%><%=operation.path%>')<% if (sendData) {%>
                 .send(data)<%}%>
                 .expect(<%=status%>)
                 .end(function (err, res) {

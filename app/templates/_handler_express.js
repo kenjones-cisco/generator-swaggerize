@@ -128,13 +128,13 @@ module.exports = {
                     break;
 
                 case 'offset':
-                    if (item && !_.isNaN(_.parseInt(item))) {
+                    if (!_.isUndefined(item) && !_.isNaN(_.parseInt(item))) {
                         options[key] = _.parseInt(item);
                     }
                     break;
 
                 case 'limit':
-                    if (item && !_.isNaN(_.parseInt(item))) {
+                    if (!_.isUndefined(item) && !_.isNaN(_.parseInt(item))) {
                         options[key] = _.parseInt(item);
                     }
                     break;
@@ -142,6 +142,10 @@ module.exports = {
                     filters[key] = item;
             }
         });
+
+        if (_.isEmpty(options)) {
+            options = null;
+        }
 
         <%=Model%>.find(filters, fields, options, function (err, results) {
             if (err) {

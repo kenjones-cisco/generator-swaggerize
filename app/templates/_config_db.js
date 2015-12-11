@@ -20,11 +20,11 @@ exports.setupDatabase = function (logger) {
         }
     };
 
-    // Connect to Database
-    mongoose.connect(uri, options);
     connection.on('error', function(err) {
         logger.log('error', 'db (%s)', dbName, err);
     });
 
-    return mongoose;
+    // Connect to Database
+    mongoose.connect(uri, options);
+
 };
