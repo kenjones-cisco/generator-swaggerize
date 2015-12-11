@@ -1,7 +1,6 @@
 'use strict';
 
-var util = require('util'),
-    url = require('url'),
+var url = require('url'),
     os = require('os'),
     path = require('path'),
     fs = require('fs'),
@@ -24,8 +23,11 @@ var TEST_FRAMEWORKS = ['tape', 'jasmine'];
 
 module.exports = generators.Base.extend({
     initializing: {
-        init: function () {
-            this.argument('name', { type: String, required: false });
+        init: function() {
+            this.argument('name', {
+                type: String,
+                required: false
+            });
 
             this.option('dry-run', {
                 type: Boolean,
@@ -59,7 +61,7 @@ module.exports = generators.Base.extend({
     },
 
     prompting: {
-        askAppNameEarly: function () {
+        askAppNameEarly: function() {
             if (this.name) {
                 debug("name provided on CLI %s", this.name);
                 return;
@@ -72,7 +74,7 @@ module.exports = generators.Base.extend({
                 message: 'Project Name',
                 name: 'name',
                 default: this.appname
-            }], function (props) {
+            }], function(props) {
                 debug("default appname was: %s", this.appname);
                 debug("appname provided: %s", props.name);
                 this.name = props.name;
@@ -80,7 +82,7 @@ module.exports = generators.Base.extend({
             }.bind(this));
         },
 
-        setAppName: function () {
+        setAppName: function() {
             var oldRoot = this.destinationRoot();
             debug("oldRoot: %s appName: %s", oldRoot, this.name);
             this.appname = this.name;
@@ -169,12 +171,11 @@ module.exports = generators.Base.extend({
             var self = this;
             var next = self.async();
 
-            var prompts = [
-                {
+            var prompts = [{
                     message: 'Path (or URL) to swagger document',
                     name: 'apiPath',
                     type: 'input',
-                    when: function () {
+                    when: function() {
                         return !self.config.get('apiPath');
                     }
                 },
@@ -184,7 +185,7 @@ module.exports = generators.Base.extend({
                     name: 'framework',
                     type: 'input',
                     default: 'express',
-                    when: function () {
+                    when: function() {
                         return !self.config.get('framework');
                     },
                     choices: FRAMEWORKS
@@ -194,7 +195,7 @@ module.exports = generators.Base.extend({
                     message: 'The database name to use with mongoose',
                     name: 'database',
                     type: 'input',
-                    when: function () {
+                    when: function() {
                         return !self.config.get('database');
                     }
                 },
@@ -204,7 +205,7 @@ module.exports = generators.Base.extend({
                     name: 'test',
                     type: 'input',
                     default: 'tape',
-                    when: function () {
+                    when: function() {
                         return !self.config.get('test');
                     },
                     choices: TEST_FRAMEWORKS
@@ -212,7 +213,7 @@ module.exports = generators.Base.extend({
 
             ];
 
-            self.prompt(prompts, function (answers) {
+            self.prompt(prompts, function(answers) {
                 for (var key in answers) {
                     debug("prompt results: %s =>", key, answers[key]);
                     if (typeof answers[key] !== 'undefined' && answers[key] !== null) {
@@ -227,7 +228,7 @@ module.exports = generators.Base.extend({
             self.config.save();
         },
 
-        validateConfigs: function () {
+        validateConfigs: function() {
             debug("framework = %s", this.config.get('framework'));
             if (!this.config.get('framework') || !~FRAMEWORKS.indexOf(this.config.get('framework'))) {
                 this.env.error(new Error('missing or invalid required input `framework`'));
@@ -244,7 +245,7 @@ module.exports = generators.Base.extend({
     },
 
     writing: {
-        copyLocal: function () {
+        copyLocal: function() {
             var apiSrc, apiSrcPath, apiDestPath, apiPath;
 
             apiSrcPath = findFile(this.config.get('apiPath'), this.env.cwd, this.appRoot);
@@ -267,7 +268,7 @@ module.exports = generators.Base.extend({
 
         },
 
-        copyRemote: function () {
+        copyRemote: function() {
             var apiSrc, apiSrcPath, apiDestPath, apiPath, done, self;
 
             apiSrcPath = this.config.get('apiPath');
@@ -284,7 +285,7 @@ module.exports = generators.Base.extend({
             apiSrc = url.parse(apiSrcPath).pathname;
             apiPath = path.join(apiDestPath, path.basename(apiSrc));
 
-            self.fetch(apiSrcPath, apiDestPath, function (err) {
+            self.fetch(apiSrcPath, apiDestPath, function(err) {
                 if (err) {
                     // safely exit based on the provided error
                     // no need to call done as this will exit the program.
@@ -297,14 +298,14 @@ module.exports = generators.Base.extend({
 
         },
 
-        validateSpec: function () {
+        validateSpec: function() {
             var self, done;
 
             self = this;
             self.api = loadApi(self.config.get('apiPath'), self.read(self.config.get('apiPath')));
 
             done = self.async();
-            enjoi(apischema).validate(self.api, function (error, value) {
+            enjoi(apischema).validate(self.api, function(error, value) {
                 if (error) {
                     // safely exit based on the provided error
                     // no need to call done as this will exit the program.
@@ -315,7 +316,7 @@ module.exports = generators.Base.extend({
             });
         },
 
-        app: function () {
+        app: function() {
             if (!this.config.get('genProject')) {
                 debug("skipping project generation");
                 return;
@@ -342,7 +343,10 @@ module.exports = generators.Base.extend({
             this.copy('_logger.js', path.join(this.appRoot, 'config', 'logger.js'));
 
             this.template('_package.json', 'package.json', this.config.getAll());
-            this.template('_README.md', 'README.md', {api: this.api, slugName: this.config.get('slugName')});
+            this.template('_README.md', 'README.md', {
+                api: this.api,
+                slugName: this.config.get('slugName')
+            });
 
             if (this.config.get('test') === 'jasmine') {
                 this.copy('_gulpfile.js', 'gulpfile.js');
@@ -353,7 +357,7 @@ module.exports = generators.Base.extend({
             });
         },
 
-        database: function () {
+        database: function() {
             if (!this.config.get('database')) {
                 debug("skipping database setup generation");
                 return;
@@ -365,11 +369,12 @@ module.exports = generators.Base.extend({
             }
 
             debug("generating database configuration files");
-            this.template('_config_db.js', path.join('config', 'db.js'),
-                {database: this.config.get('database')});
+            this.template('_config_db.js', path.join('config', 'db.js'), {
+                database: this.config.get('database')
+            });
         },
 
-        models: function () {
+        models: function() {
             var self = this;
             var models = {};
 
@@ -382,7 +387,7 @@ module.exports = generators.Base.extend({
                 mkdirp.sync(path.join(self.appRoot, 'models'));
             }
 
-            Object.keys(this.api.definitions).forEach(function (modelName) {
+            Object.keys(this.api.definitions).forEach(function(modelName) {
                 var model;
 
                 model = self.api.definitions[modelName];
@@ -397,8 +402,8 @@ module.exports = generators.Base.extend({
                 model.children = {};
 
                 if (model['x-children']) {
-                    debug("children: %s",model['x-children']);
-                    _.forEach(model['x-children'], function (childName, key) {
+                    debug("children: %s", model['x-children']);
+                    _.forEach(model['x-children'], function(childName, key) {
                         debug("childName: %s", childName);
                         model.children[childName] = self.api.definitions[childName];
                     });
@@ -407,7 +412,7 @@ module.exports = generators.Base.extend({
                 models[modelName] = model;
             });
 
-            Object.keys(models).forEach(function (modelName) {
+            Object.keys(models).forEach(function(modelName) {
                 var file, fileName, model;
 
                 model = models[modelName];
@@ -431,7 +436,7 @@ module.exports = generators.Base.extend({
             });
         },
 
-        handlers: function () {
+        handlers: function() {
             var routes, self;
 
             if (!this.config.get('genHandlers')) {
@@ -446,7 +451,7 @@ module.exports = generators.Base.extend({
                 mkdirp.sync(path.join(self.appRoot, 'handlers'));
             }
 
-            Object.keys(this.api.paths).forEach(function (path) {
+            Object.keys(this.api.paths).forEach(function(path) {
                 var pathnames, route;
                 var def = self.api.paths[path];
 
@@ -459,7 +464,7 @@ module.exports = generators.Base.extend({
 
                 pathnames = [];
 
-                path.split('/').forEach(function (element) {
+                path.split('/').forEach(function(element) {
                     if (element) {
                         pathnames.push(element);
                     }
@@ -470,7 +475,7 @@ module.exports = generators.Base.extend({
                 // else default to the route path.
                 route.handler = def['x-handler'] || route.pathname;
 
-                builderUtils.verbs.forEach(function (verb) {
+                builderUtils.verbs.forEach(function(verb) {
                     var operation = self.api.paths[path][verb];
 
                     if (!operation) {
@@ -495,7 +500,7 @@ module.exports = generators.Base.extend({
                 routes[route.pathname] = route;
             });
 
-            Object.keys(routes).forEach(function (routePath) {
+            Object.keys(routes).forEach(function(routePath) {
                 var handlername, route, file;
 
                 route = routes[routePath];
@@ -517,7 +522,7 @@ module.exports = generators.Base.extend({
                 }
 
                 // provides access to lodash within the template
-                route._  = _;
+                route._ = _;
                 route.dbmodels = self._getDbModels(route);
                 if (!self.options['dry-run']) {
                     self.template('_handler_' + self.config.get('framework') + '.js', file, route);
@@ -527,7 +532,7 @@ module.exports = generators.Base.extend({
             });
         },
 
-        tests: function () {
+        tests: function() {
             var self, api, models, resourcePath, handlersPath, modelsPath, apiPath;
 
             if (!this.config.get('genTests')) {
@@ -549,13 +554,13 @@ module.exports = generators.Base.extend({
 
             if (api.definitions && modelsPath) {
 
-                Object.keys(api.definitions).forEach(function (key) {
+                Object.keys(api.definitions).forEach(function(key) {
                     var modelSchema, options;
 
                     options = {};
                     modelSchema = api.definitions[key];
 
-                    Object.keys(modelSchema.properties).forEach(function (prop) {
+                    Object.keys(modelSchema.properties).forEach(function(prop) {
                         var defaultValue;
 
                         switch (modelSchema.properties[prop].type) {
@@ -585,20 +590,20 @@ module.exports = generators.Base.extend({
             }
             resourcePath = api.basePath;
 
-            Object.keys(api.paths).forEach(function (opath) {
+            Object.keys(api.paths).forEach(function(opath) {
                 var file, fileName, operations, template;
                 var def = api.paths[opath];
 
                 operations = [];
 
-                builderUtils.verbs.forEach(function (verb) {
+                builderUtils.verbs.forEach(function(verb) {
                     var operation = {};
 
                     if (!api.paths[opath][verb]) {
                         return;
                     }
 
-                    Object.keys(def[verb]).forEach(function (key) {
+                    Object.keys(def[verb]).forEach(function(key) {
                         operation[key] = def[verb][key];
                     });
 
@@ -638,13 +643,15 @@ module.exports = generators.Base.extend({
             });
         },
 
-        finalize: function () {
+        finalize: function() {
             // enable beautify of all js files
-            var condition = function (file) {
+            var condition = function(file) {
                 return path.extname(file.path) === '.js';
             };
 
-            this.registerTransformStream(gulpif(condition, beautify({jslint_happy: true})));
+            this.registerTransformStream(gulpif(condition, beautify({
+                jslint_happy: true
+            })));
         }
 
     },
@@ -658,7 +665,9 @@ module.exports = generators.Base.extend({
 
             if (!this.options.only) {
                 if (!this.options['dry-run']) {
-                    this.npmInstall([], {"--quiet": true});
+                    this.npmInstall([], {
+                        "--quiet": true
+                    });
                 } else {
                     this.log("(DRY-RUN) install complete");
                 }
@@ -666,7 +675,7 @@ module.exports = generators.Base.extend({
         }
     },
 
-    _prepareDest: function () {
+    _prepareDest: function() {
         var apiDestPath = this.destinationPath('config');
         if (this.options['dry-run']) {
             this.log("(DRY-RUN) using temp location %s", path.join(os.tmpdir(), 'config'));
@@ -677,7 +686,7 @@ module.exports = generators.Base.extend({
         return apiDestPath;
     },
 
-    _isRemote: function (apiPath) {
+    _isRemote: function(apiPath) {
         return apiPath.indexOf('http') === 0;
     },
 
@@ -691,10 +700,10 @@ module.exports = generators.Base.extend({
             return null;
         }
 
-        route.path.split('/').forEach(function (element) {
+        route.path.split('/').forEach(function(element) {
             if (element) {
                 single = pluralize.singular(element);
-                debug("element: %s single: %s",element, single);
+                debug("element: %s single: %s", element, single);
                 dbFileName = path.join(self.appRoot, 'models', single + '.js');
                 if (self.fs.exists(dbFileName)) {
                     className = us.classify(single);
